@@ -1,7 +1,10 @@
 {
-  "_note": "Regression example: survive-the-clock with ranged enemies. Exercises facing-aim (keyboard only), shooter AI, and the shield hook.",
+  "_note": "Regression example: survive-the-clock with ranged enemies. Exercises facing-aim (keyboard only), shooter AI, the shield hook, and the neon style.",
   "seed": 777,
-  "mechanicHooks": ["pierce", "shield"],
+  "mechanicHooks": [
+    "pierce",
+    "shield"
+  ],
   "theme": {
     "floor": "#0d1117",
     "wall": "#4b5563",
@@ -11,12 +14,56 @@
     "floorPattern": "none"
   },
   "entities": {
-    "player": { "shape": "triangle", "size": 16, "eyes": false },
-    "enemy": { "shape": "diamond", "size": 15, "speed": 34, "hp": 3, "behavior": "shooter", "fireEvery": 2.2, "eyes": false }
+    "player": {
+      "size": 16,
+      "sprite": {
+        "build": "ship",
+        "features": [
+          "wings"
+        ],
+        "eyes": "none",
+        "pattern": "none"
+      }
+    },
+    "enemy": {
+      "size": 15,
+      "speed": 34,
+      "hp": 3,
+      "behavior": "shooter",
+      "fireEvery": 2.2,
+      "sprite": {
+        "build": "crystal",
+        "features": [],
+        "eyes": "none",
+        "pattern": "none"
+      }
+    }
   },
-  "arena": { "coverCount": 9 },
-  "movement": { "speed": 100, "accel": 18 },
-  "combat": { "aim": "facing", "fireRate": 4, "bulletSpeed": 300, "damage": 1 },
-  "waves": { "count": 6, "baseEnemies": 3, "ramp": 1, "hpRamp": 0.2, "restBetween": 2.5 },
-  "rules": { "win": "survive", "surviveSeconds": 70, "health": 4, "killScore": 20 }
+  "arena": {
+    "coverCount": 9
+  },
+  "movement": {
+    "speed": 100,
+    "accel": 18
+  },
+  "combat": {
+    "aim": "facing",
+    "fireRate": 4,
+    "bulletSpeed": 300,
+    "damage": 1
+  },
+  "waves": {
+    "count": 6,
+    "baseEnemies": 3,
+    "ramp": 1,
+    "hpRamp": 0.2,
+    "restBetween": 2.5
+  },
+  "rules": {
+    "win": "survive",
+    "surviveSeconds": 70,
+    "health": 4,
+    "killScore": 20
+  },
+  "style": "neon"
 }

@@ -1,7 +1,9 @@
 {
-  "_note": "Regression example: reach-the-exit with active chasers. Exercises goalNeedsAll, a timer, and chase AI kept slower than the player.",
+  "_note": "Regression example: reach-the-exit with active chasers. Exercises goalNeedsAll, a timer, chase AI kept slower than the player, and the clay style.",
   "seed": 1207,
-  "mechanicHooks": ["dash"],
+  "mechanicHooks": [
+    "dash"
+  ],
   "theme": {
     "floor": "#101725",
     "wall": "#2f4858",
@@ -15,9 +17,32 @@
     "pickupName": "books"
   },
   "entities": {
-    "player": { "shape": "circle", "size": 12, "eyes": true },
-    "enemy": { "shape": "ghost", "size": 14, "speed": 52, "behavior": "chase", "eyes": true },
-    "pickup": { "shape": "diamond", "size": 9 }
+    "player": {
+      "size": 12,
+      "sprite": {
+        "build": "orb",
+        "features": [
+          "crown"
+        ],
+        "eyes": "big",
+        "pattern": "none"
+      }
+    },
+    "enemy": {
+      "size": 14,
+      "speed": 52,
+      "behavior": "chase",
+      "sprite": {
+        "build": "ghost",
+        "features": [],
+        "eyes": "angry",
+        "pattern": "none"
+      }
+    },
+    "pickup": {
+      "size": 9,
+      "icon": "key"
+    }
   },
   "level": {
     "tileSize": 20,
@@ -35,7 +60,11 @@
       "######################"
     ]
   },
-  "movement": { "speed": 104, "accel": 22, "diagonal": true },
+  "movement": {
+    "speed": 104,
+    "accel": 22,
+    "diagonal": true
+  },
   "rules": {
     "win": "reachGoal",
     "goalNeedsAll": true,
@@ -43,5 +72,6 @@
     "lives": 3,
     "timeLimit": 150,
     "pickupScore": 30
-  }
+  },
+  "style": "clay"
 }

@@ -46,10 +46,11 @@ or collision code. Express the user's idea entirely through:
   - `mechanicHooks`: template-specific optional extras (e.g. double-jump, dash,
     shooting, gravity-flip) — only use hooks the template explicitly supports;
     never write new physics code inline.
-  - `assets`: simple procedural/geometric sprite descriptions (the renderer
-    draws shapes and colors, not image files) unless an asset-generation step
-    is available. Keep visuals achievable in Canvas primitives (rects, circles,
-    polygons, simple sprite-sheets) so nothing is a broken image reference.
+  - `style`: the ART DIRECTION for the whole game. See STYLE below.
+  - `sprite`: what each character looks like, chosen from a fixed parts library
+    (a body plan plus up to three features, eyes, and a marking pattern). See
+    SPRITES below. You never describe art in prose and never reference image
+    files — you pick parts, and the renderer draws them.
 
 ### Step 3 — Validate before returning
 Before returning output, confirm:
@@ -59,6 +60,9 @@ Before returning output, confirm:
     template's documented safe range. Never extrapolate past those ranges —
     out-of-range numbers are the single largest cause of unplayable output.
   - The theme is internally consistent: name, colors, and story blurb agree.
+  - The style suits the subject, and the sprite parts add up to the character
+    the title names. A game called "Cat Ninja" whose player is a plain blob is
+    a failed generation even if every value is in range.
 
 ### Step 4 — Output format
 Return ONLY:
@@ -81,6 +85,60 @@ game reliable: the tested engine code never changes, only your config does.
   `template_switch_required` flag and one sentence naming the archetype that
   would be needed instead. Do not silently fail, and do not hallucinate
   unsupported code.
+
+## STYLE — pick once, it governs everything
+
+`style` is a single enum on the config, and it is the strongest lever you have.
+It sets sprite outlines and shading, terrain tiles, hazard shapes, particles,
+HUD chrome, the win/lose screen, AND the fonts, borders and shadows of the
+game's published landing page. The game and its page are one artifact; you do
+not style them separately, and there is no way to make them disagree.
+
+  pixel      Hard 1px outlines, flat three-tone shading, mono HUD, hard
+             offset shadows on the page. The safe default.
+  neon       Dark ground, glowing edges, wide-tracked uppercase type. For
+             cyber, arcade, synthwave, night-city, laser subjects.
+  storybook  Thick soft outlines, warm paper, serif type, round cards. For
+             fairytale, woodland, cosy, folk, medieval subjects.
+  clay       No outlines, soft top-lighting, very round corners. For cute,
+             toy-like, pastel, squishy, kid-friendly subjects.
+
+Choose from the SUBJECT, not from the mechanic. "A neon robot platformer" is
+neon; "a cosy fox in a forest" is storybook. When nothing in the prompt implies
+a look, use pixel.
+
+## SPRITES — compose, don't describe
+
+Characters are composed from a fixed parts library. You choose:
+
+  build      the silhouette. biped, blob, orb, ship, ghost, bug, crystal are
+             front-facing; quadruped, bird, fish, car are side-facing and flip
+             to face the way they travel.
+  features   up to three parts layered on: earsPointed, earsRound, horns,
+             antenna, crown, visor, scarf, wings, cape, tail.
+  eyes       dot, big, angry (adds a brow), visor or none (hides the eyes —
+             pair with the visor feature).
+  pattern    none, stripes, spots, belly, plated. Painted only over plain body
+             pixels, so a face is never covered.
+
+The combination is what makes a character recognisable, so choose parts that
+add up to the thing:
+
+  a cat        quadruped + earsPointed + tail, pattern stripes
+  a guard dog  quadruped + earsPointed + tail, eyes angry
+  a raccoon    quadruped + earsRound + tail, pattern stripes
+  a robot      biped + visor + antenna, eyes visor, pattern plated
+  a king slime blob + crown
+  a dragon     biped + horns + wings, eyes angry
+  a spaceship  ship, eyes none
+  a beetle     bug + horns, pattern plated, eyes angry
+
+Give enemies `eyes: angry` unless there's a reason not to — it is the cheapest
+way to make a threat read as a threat.
+
+Collectibles are picked from a separate icon list: coin, gem, star, heart, key,
+orb, fruit, bolt, shell, skull. Pick the one that matches `theme.pickupName` —
+"snacks" should be `fruit`, not `coin`.
 
 ## ARCHETYPE TEMPLATE LIBRARY (extend as templates are built)
 - platformer-classic (gravity, jump, collect, hazards, goal flag)

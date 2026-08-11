@@ -3,7 +3,11 @@
   "version": "1.0.0",
   "label": "Top-down shooter",
   "blurb": "Hold an arena against waves of things that want you dead.",
-  "primaryVerbs": ["shoot", "survive", "dodge"],
+  "primaryVerbs": [
+    "shoot",
+    "survive",
+    "dodge"
+  ],
   "goodFor": "Anything where the main verb is shooting. Aim with the mouse, or with the movement direction on keyboard.",
   "reachability": null,
   "mechanicHooks": {
@@ -16,20 +20,71 @@
   "config": {
     "type": "object",
     "fields": {
-      "seed": { "type": "int", "min": 0, "max": 999999, "default": 5, "doc": "Fixes cover placement." },
+      "seed": {
+        "type": "int",
+        "min": 0,
+        "max": 999999,
+        "default": 5,
+        "doc": "Fixes cover placement."
+      },
+      "style": {
+        "type": "enum",
+        "values": [
+          "pixel",
+          "neon",
+          "storybook",
+          "clay"
+        ],
+        "default": "pixel",
+        "doc": "Art direction for the WHOLE game and its landing page: sprite outlines and shading, terrain tiles, hazards, particles, HUD chrome, and the published page's fonts and borders. Pick one that fits the subject and everything follows from it."
+      },
       "mechanicHooks": {
-        "type": "array", "maxItems": 5, "default": [],
-        "of": { "type": "enum", "values": ["spread", "pierce", "dashRoll", "shield", "homing"], "default": "spread" }
+        "type": "array",
+        "maxItems": 5,
+        "default": [],
+        "of": {
+          "type": "enum",
+          "values": [
+            "spread",
+            "pierce",
+            "dashRoll",
+            "shield",
+            "homing"
+          ],
+          "default": "spread"
+        }
       },
       "theme": {
         "type": "object",
         "fields": {
-          "floor":        { "type": "color", "default": "#12141d" },
-          "wall":         { "type": "color", "default": "#39415c" },
-          "accent":       { "type": "color", "default": "#ffd166" },
-          "player":       { "type": "color", "default": "#7ee787" },
-          "enemy":        { "type": "color", "default": "#ff6b6b" },
-          "floorPattern": { "type": "enum", "values": ["none", "grid"], "default": "grid" }
+          "floor": {
+            "type": "color",
+            "default": "#12141d"
+          },
+          "wall": {
+            "type": "color",
+            "default": "#39415c"
+          },
+          "accent": {
+            "type": "color",
+            "default": "#ffd166"
+          },
+          "player": {
+            "type": "color",
+            "default": "#7ee787"
+          },
+          "enemy": {
+            "type": "color",
+            "default": "#ff6b6b"
+          },
+          "floorPattern": {
+            "type": "enum",
+            "values": [
+              "none",
+              "grid"
+            ],
+            "default": "grid"
+          }
         }
       },
       "entities": {
@@ -38,21 +93,192 @@
           "player": {
             "type": "object",
             "fields": {
-              "shape": { "type": "enum", "values": ["rect", "round", "circle", "triangle", "diamond", "star", "hexagon", "cross", "blob", "ship", "ghost"], "default": "ship" },
-              "size":  { "type": "int", "min": 8, "max": 26, "default": 15 },
-              "eyes":  { "type": "bool", "default": false }
+              "size": {
+                "type": "int",
+                "min": 8,
+                "max": 26,
+                "default": 15
+              },
+              "sprite": {
+                "type": "object",
+                "doc": "What the player looks like.",
+                "fields": {
+                  "build": {
+                    "type": "enum",
+                    "values": [
+                      "biped",
+                      "blob",
+                      "orb",
+                      "ship",
+                      "ghost",
+                      "bug",
+                      "crystal",
+                      "quadruped",
+                      "bird",
+                      "fish",
+                      "car"
+                    ],
+                    "default": "ship",
+                    "doc": "Body plan. quadruped/bird/fish/car are side-facing and flip to face travel; the rest face the player."
+                  },
+                  "features": {
+                    "type": "array",
+                    "maxItems": 3,
+                    "of": {
+                      "type": "enum",
+                      "values": [
+                        "earsPointed",
+                        "earsRound",
+                        "horns",
+                        "antenna",
+                        "crown",
+                        "visor",
+                        "scarf",
+                        "wings",
+                        "cape",
+                        "tail"
+                      ],
+                      "default": "earsPointed"
+                    },
+                    "default": [],
+                    "doc": "Parts layered on the body. Ears+tail make a quadruped read as a specific animal; visor+antenna make a biped read as a robot."
+                  },
+                  "eyes": {
+                    "type": "enum",
+                    "values": [
+                      "dot",
+                      "big",
+                      "angry",
+                      "visor",
+                      "none"
+                    ],
+                    "default": "none",
+                    "doc": "angry adds a brow, visor/none hide the eyes (use with the visor feature)."
+                  },
+                  "pattern": {
+                    "type": "enum",
+                    "values": [
+                      "none",
+                      "stripes",
+                      "spots",
+                      "belly",
+                      "plated"
+                    ],
+                    "default": "none",
+                    "doc": "Markings painted over plain body pixels only, so they never cover the face."
+                  }
+                }
+              }
             }
           },
           "enemy": {
             "type": "object",
             "fields": {
-              "shape":     { "type": "enum", "values": ["rect", "round", "circle", "triangle", "diamond", "star", "hexagon", "cross", "blob", "ship", "ghost"], "default": "hexagon" },
-              "size":      { "type": "int", "min": 8, "max": 30, "default": 14 },
-              "speed":     { "type": "number", "min": 10, "max": 130, "default": 46, "doc": "px/s. Keep well below movement.speed or the arena becomes a coin flip." },
-              "hp":        { "type": "int", "min": 1, "max": 12, "default": 2 },
-              "behavior":  { "type": "enum", "values": ["rush", "drift", "shooter"], "default": "rush" },
-              "fireEvery": { "type": "number", "min": 0.4, "max": 6, "default": 1.8, "doc": "Seconds between shots; only used when behavior is shooter." },
-              "eyes":      { "type": "bool", "default": true }
+              "size": {
+                "type": "int",
+                "min": 8,
+                "max": 30,
+                "default": 14
+              },
+              "speed": {
+                "type": "number",
+                "min": 10,
+                "max": 130,
+                "default": 46,
+                "doc": "px/s. Keep well below movement.speed or the arena becomes a coin flip."
+              },
+              "hp": {
+                "type": "int",
+                "min": 1,
+                "max": 12,
+                "default": 2
+              },
+              "behavior": {
+                "type": "enum",
+                "values": [
+                  "rush",
+                  "drift",
+                  "shooter"
+                ],
+                "default": "rush"
+              },
+              "fireEvery": {
+                "type": "number",
+                "min": 0.4,
+                "max": 6,
+                "default": 1.8,
+                "doc": "Seconds between shots; only used when behavior is shooter."
+              },
+              "sprite": {
+                "type": "object",
+                "doc": "What the enemies look like.",
+                "fields": {
+                  "build": {
+                    "type": "enum",
+                    "values": [
+                      "biped",
+                      "blob",
+                      "orb",
+                      "ship",
+                      "ghost",
+                      "bug",
+                      "crystal",
+                      "quadruped",
+                      "bird",
+                      "fish",
+                      "car"
+                    ],
+                    "default": "bug",
+                    "doc": "Body plan. quadruped/bird/fish/car are side-facing and flip to face travel; the rest face the player."
+                  },
+                  "features": {
+                    "type": "array",
+                    "maxItems": 3,
+                    "of": {
+                      "type": "enum",
+                      "values": [
+                        "earsPointed",
+                        "earsRound",
+                        "horns",
+                        "antenna",
+                        "crown",
+                        "visor",
+                        "scarf",
+                        "wings",
+                        "cape",
+                        "tail"
+                      ],
+                      "default": "earsPointed"
+                    },
+                    "default": [],
+                    "doc": "Parts layered on the body. Ears+tail make a quadruped read as a specific animal; visor+antenna make a biped read as a robot."
+                  },
+                  "eyes": {
+                    "type": "enum",
+                    "values": [
+                      "dot",
+                      "big",
+                      "angry",
+                      "visor",
+                      "none"
+                    ],
+                    "default": "angry",
+                    "doc": "angry adds a brow, visor/none hide the eyes (use with the visor feature)."
+                  },
+                  "pattern": {
+                    "type": "enum",
+                    "values": [
+                      "none",
+                      "stripes",
+                      "spots",
+                      "belly",
+                      "plated"
+                    ],
+                    "default": "plated",
+                    "doc": "Markings painted over plain body pixels only, so they never cover the face."
+                  }
+                }
+              }
             }
           }
         }
@@ -60,42 +286,131 @@
       "arena": {
         "type": "object",
         "fields": {
-          "coverCount": { "type": "int", "min": 0, "max": 14, "default": 5, "doc": "Cover blocks. Above ~10 the arena gets cramped." }
+          "coverCount": {
+            "type": "int",
+            "min": 0,
+            "max": 14,
+            "default": 5,
+            "doc": "Cover blocks. Above ~10 the arena gets cramped."
+          }
         }
       },
       "movement": {
         "type": "object",
         "fields": {
-          "speed": { "type": "number", "min": 40, "max": 220, "default": 108 },
-          "accel": { "type": "number", "min": 4, "max": 40, "default": 20 }
+          "speed": {
+            "type": "number",
+            "min": 40,
+            "max": 220,
+            "default": 108
+          },
+          "accel": {
+            "type": "number",
+            "min": 4,
+            "max": 40,
+            "default": 20
+          }
         }
       },
       "combat": {
         "type": "object",
         "fields": {
-          "aim":         { "type": "enum", "values": ["mouse", "facing"], "default": "mouse" },
-          "fireRate":    { "type": "number", "min": 0.5, "max": 14, "default": 5, "doc": "Shots per second." },
-          "bulletSpeed": { "type": "number", "min": 90, "max": 620, "default": 320 },
-          "damage":      { "type": "int", "min": 1, "max": 10, "default": 1 }
+          "aim": {
+            "type": "enum",
+            "values": [
+              "mouse",
+              "facing"
+            ],
+            "default": "mouse"
+          },
+          "fireRate": {
+            "type": "number",
+            "min": 0.5,
+            "max": 14,
+            "default": 5,
+            "doc": "Shots per second."
+          },
+          "bulletSpeed": {
+            "type": "number",
+            "min": 90,
+            "max": 620,
+            "default": 320
+          },
+          "damage": {
+            "type": "int",
+            "min": 1,
+            "max": 10,
+            "default": 1
+          }
         }
       },
       "waves": {
         "type": "object",
         "fields": {
-          "count":        { "type": "int", "min": 1, "max": 30, "default": 6, "doc": "Only used when win is clearWaves." },
-          "baseEnemies":  { "type": "int", "min": 1, "max": 20, "default": 4 },
-          "ramp":         { "type": "number", "min": 0, "max": 6, "default": 1.5, "doc": "Extra enemies per wave." },
-          "hpRamp":       { "type": "number", "min": 0, "max": 3, "default": 0.34, "doc": "Extra enemy HP per wave." },
-          "restBetween":  { "type": "number", "min": 0.5, "max": 8, "default": 2 }
+          "count": {
+            "type": "int",
+            "min": 1,
+            "max": 30,
+            "default": 6,
+            "doc": "Only used when win is clearWaves."
+          },
+          "baseEnemies": {
+            "type": "int",
+            "min": 1,
+            "max": 20,
+            "default": 4
+          },
+          "ramp": {
+            "type": "number",
+            "min": 0,
+            "max": 6,
+            "default": 1.5,
+            "doc": "Extra enemies per wave."
+          },
+          "hpRamp": {
+            "type": "number",
+            "min": 0,
+            "max": 3,
+            "default": 0.34,
+            "doc": "Extra enemy HP per wave."
+          },
+          "restBetween": {
+            "type": "number",
+            "min": 0.5,
+            "max": 8,
+            "default": 2
+          }
         }
       },
       "rules": {
         "type": "object",
         "fields": {
-          "win":            { "type": "enum", "values": ["clearWaves", "survive"], "default": "clearWaves" },
-          "surviveSeconds": { "type": "number", "min": 15, "max": 300, "default": 60 },
-          "health":         { "type": "int", "min": 1, "max": 9, "default": 3 },
-          "killScore":      { "type": "int", "min": 1, "max": 500, "default": 10 }
+          "win": {
+            "type": "enum",
+            "values": [
+              "clearWaves",
+              "survive"
+            ],
+            "default": "clearWaves"
+          },
+          "surviveSeconds": {
+            "type": "number",
+            "min": 15,
+            "max": 300,
+            "default": 60
+          },
+          "health": {
+            "type": "int",
+            "min": 1,
+            "max": 9,
+            "default": 3
+          },
+          "killScore": {
+            "type": "int",
+            "min": 1,
+            "max": 500,
+            "default": 10
+          }
         }
       }
     }

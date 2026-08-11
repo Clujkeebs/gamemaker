@@ -52,8 +52,15 @@ RULES
 - Levels must be winnable: exactly one P, a reachable G when the win condition
   needs one, and no required tile sealed behind solid blocks.
 - Grid rows must all be the same length.
-- Visuals are Canvas primitives only — shapes and colors, never image files.
-- The theme must be internally consistent: title, colors, and pickupName agree.
+- Art comes from the parts library only. Never image files, never prose art
+  direction. Pick a style from the SUBJECT, and compose each character from a
+  build plus features so it reads as the thing the title names: a cat is
+  quadruped + earsPointed + tail, a robot is biped + visor + antenna, a dragon
+  is biped + horns + wings. Enemies get eyes "angry" unless there's a reason not to.
+- The style governs the game AND its published landing page, so pick one that
+  fits the whole idea, not just the sprites.
+- The theme must be internally consistent: title, colors, pickupName, and the
+  collectible icon all agree ("snacks" means the fruit icon, not coin).
 
 OUTPUT
 Reply with ONLY this JSON, no prose, no code fence:

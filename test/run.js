@@ -13,6 +13,8 @@ import { buildBundle } from '../server/bundle.js';
 import { defaultPage, renderArcadePage, renderGamePage } from '../arcade/render.js';
 import { generateOffline, classifyOffline } from '../server/offline.js';
 import { simulate } from './harness.js';
+import { composeMask, BUILD_NAMES, OVERLAY_NAMES, PICKUPS, RES } from '../shared/sprites.js';
+import { STYLES, STYLE_NAMES } from '../shared/styles.js';
 
 const all = [...templates.values()];
 const arcadeSchema = JSON.parse(readFileSync(join(ROOT, 'arcade', 'schema.json'), 'utf8'));
@@ -390,4 +392,164 @@ test('the standalone game page pins its engine version', () => {
   const html = renderGamePage(game);
   assert.ok(html.includes(`v${game.template_version}`));
   assert.ok(html.includes('type="module"'));
+});
+
+// ── art direction ───────────────────────────────────────────────────────────
+
+test('every body plan, feature, and pickup composes to a well-formed mask', () => {
+  for (const build of BUILD_NAMES) {
+    for (const feature of [...OVERLAY_NAMES, undefined]) {
+      const mask = composeMask({ build, features: feature ? [feature] : [], eyes: 'big', pattern: 'stripes' });
+      assert.equal(mask.length, RES, `${build}/${feature}: wrong row count`);
+      for (const row of mask) assert.equal(row.length, RES, `${build}/${feature}: ragged row`);
+      assert.ok(mask.some((r) => /[BDLA]/.test(r)), `${build}/${feature}: composed to nothing`);
+    }
+  }
+  for (const [name, rows] of Object.entries(PICKUPS)) {
+    assert.equal(rows.length, RES, `pickup ${name}: wrong row count`);
+    for (const row of rows) assert.equal(row.length, RES, `pickup ${name}: ragged row`);
+  }
+});
+
+test('a sprite is symmetric when its body plan is front-facing, and not when it is not', () => {
+  // Symmetry is what stops a composed sprite reading as a mistake. Side-facing
+  // plans must NOT be symmetric or they lose their direction entirely.
+  const symmetric = (mask) => mask.every((row) => row === [...row].reverse().join(''));
+  assert.ok(symmetric(composeMask({ build: 'biped', features: [], eyes: 'big', pattern: 'none' })));
+  assert.ok(symmetric(composeMask({ build: 'blob', features: ['crown'], eyes: 'big', pattern: 'none' })));
+  assert.ok(!symmetric(composeMask({ build: 'quadruped', features: ['tail'], eyes: 'big', pattern: 'none' })));
+});
+
+test('features land on the head, not the body, for both anatomies', () => {
+  // The bug this pins: front-facing ear masks applied to a side-facing body put
+  // the ears over the creature's back.
+  const rowsWith = (spec) => composeMask(spec);
+  const front = rowsWith({ build: 'biped', features: ['earsPointed'], eyes: 'big', pattern: 'none' });
+  const side = rowsWith({ build: 'quadruped', features: ['earsPointed'], eyes: 'big', pattern: 'none' });
+
+  // Front-facing head is centred, so its ears straddle the middle columns.
+  const frontEarCols = [...front[1]].flatMap((c, i) => (c !== '.' ? [i] : []));
+  assert.ok(Math.min(...frontEarCols) < RES / 2 && Math.max(...frontEarCols) > RES / 2,
+    'front ears did not straddle the centre');
+
+  // Side-facing head sits on the right, so its ears must be on the right half.
+  const sideEarCols = [...side[0]].flatMap((c, i) => (c !== '.' ? [i] : []));
+  assert.ok(sideEarCols.length > 0, 'side ears did not render at all');
+  assert.ok(Math.min(...sideEarCols) >= RES / 2, `side ears landed on the body at cols ${sideEarCols}`);
+});
+
+test('patterns never cover the eyes', () => {
+  for (const pattern of ['stripes', 'spots', 'belly', 'plated']) {
+    for (const build of ['biped', 'blob', 'quadruped', 'bird']) {
+      const plain = composeMask({ build, features: [], eyes: 'big', pattern: 'none' });
+      const marked = composeMask({ build, features: [], eyes: 'big', pattern });
+      const eyesIn = (m) => m.join('').split('').filter((c) => c === 'E' || c === 'P').length;
+      assert.equal(eyesIn(marked), eyesIn(plain), `${build}/${pattern} ate the face`);
+    }
+  }
+});
+
+test('sprite composition is deterministic', () => {
+  const spec = { build: 'quadruped', features: ['earsPointed', 'tail'], eyes: 'angry', pattern: 'stripes' };
+  assert.deepEqual(composeMask(spec), composeMask(structuredClone(spec)));
+});
+
+test('every style defines every layer it is supposed to govern', () => {
+  for (const [id, style] of Object.entries(STYLES)) {
+    assert.equal(style.id, id, `${id}: id mismatch`);
+    for (const key of ['sprite', 'tile', 'hazard', 'particle', 'hud', 'overlay', 'page']) {
+      assert.ok(style[key] !== undefined, `style ${id} is missing "${key}" — that layer would silently fall back`);
+    }
+    for (const key of ['fontStack', 'radius', 'cardRadius', 'buttonRadius', 'shadow', 'buttonShadow', 'cardBorder']) {
+      assert.ok(style.page[key], `style ${id}: page.${key} missing`);
+    }
+    assert.ok(style.hud.font.includes('px'), `style ${id}: hud font is not a usable CSS font shorthand`);
+  }
+});
+
+test('the four styles are actually distinguishable from each other', () => {
+  // A style pack that duplicates another is a style that does nothing.
+  const fingerprint = (s) => JSON.stringify([s.sprite.outline, s.tile.mode, s.hazard, s.particle.shape, s.page.fontStack]);
+  const seen = new Set(Object.values(STYLES).map(fingerprint));
+  assert.equal(seen.size, Object.keys(STYLES).length, 'two styles render identically');
+});
+
+test('the game style reaches the published page — fonts, borders and shadows', () => {
+  // The promise under test: one token in the config governs the game AND the
+  // page, and picking a different one visibly changes the published HTML.
+  const seen = new Map();
+  for (const styleId of STYLE_NAMES) {
+    const game = generateOffline('a cat ninja in a bamboo forest');
+    game.config.style = styleId;
+    const page = defaultPage(game, defaultsFor(arcadeSchema.config));
+    assert.equal(page.style, styleId, 'defaultPage did not inherit the game style');
+
+    const html = renderArcadePage(page, game);
+    const style = STYLES[styleId];
+    assert.ok(html.includes(style.page.fontStack.split(',')[0].trim()), `${styleId}: page font missing`);
+    assert.ok(html.includes(style.page.buttonRadius), `${styleId}: button radius missing`);
+    assert.ok(html.includes(style.page.shadow), `${styleId}: shadow missing`);
+    assert.ok(html.includes(`Style: ${styleId}`), `${styleId}: page did not record which style built it`);
+    seen.set(styleId, html);
+  }
+  assert.equal(new Set(seen.values()).size, STYLE_NAMES.length, 'different styles produced identical pages');
+});
+
+test('a restyled game restyles its page even when the page stored an older style', () => {
+  const game = generateOffline('a neon robot in a cyber maze');
+  const page = defaultPage(game, defaultsFor(arcadeSchema.config));
+  page.style = 'storybook';          // stale value, as if stored before a restyle
+  game.config.style = 'clay';        // the game is the source of truth
+  const html = renderArcadePage(page, game);
+  assert.ok(html.includes('Style: clay'), 'the page followed its own stale style instead of the game');
+  assert.ok(!html.includes('Iowan Old Style'), 'storybook font leaked into a clay page');
+});
+
+test('the arcade page palette is computed from the game palette', () => {
+  const game = generateOffline('a cat ninja in a bamboo forest');
+  const page = defaultPage(game, defaultsFor(arcadeSchema.config));
+  assert.equal(page.theme.accent, game.config.theme.accent, 'page accent should be the game accent');
+  assert.equal(page.theme.background, game.config.theme.skyBottom, 'page background should come from the game');
+});
+
+test('the offline generator picks a style and a matching cast from the prompt', () => {
+  const cases = [
+    ['a neon robot escaping a cyber maze', 'neon', 'biped', 'visor'],
+    ['a cosy storybook fox in a woodland village', 'storybook', 'quadruped', 'tail'],
+    ['a cute clay penguin waddling on the ice', 'clay', 'bird', null],
+    ['a cat ninja dodging guard dogs', 'pixel', 'quadruped', 'earsPointed'],
+  ];
+  for (const [prompt, style, build, feature] of cases) {
+    const game = generateOffline(prompt);
+    assert.equal(game.config.style, style, `"${prompt}" -> style ${game.config.style}`);
+    const sprite = game.config.entities?.player?.sprite;
+    assert.ok(sprite, `"${prompt}": no player sprite`);
+    assert.equal(sprite.build, build, `"${prompt}" -> build ${sprite.build}`);
+    if (feature) assert.ok(sprite.features.includes(feature), `"${prompt}": missing feature ${feature}`);
+  }
+});
+
+test('every generated config produces sprites that compose without error', () => {
+  for (const prompt of ['a cat ninja', 'a robot in a factory', 'defend the base from beetles', 'break bricks']) {
+    const game = generateOffline(prompt);
+    for (const who of ['player', 'enemy']) {
+      const spec = game.config.entities?.[who]?.sprite;
+      if (!spec) continue;
+      const mask = composeMask(spec);
+      assert.equal(mask.length, RES);
+      assert.ok(BUILD_NAMES.includes(spec.build), `${prompt}/${who}: unknown build ${spec.build}`);
+      for (const f of spec.features) assert.ok(OVERLAY_NAMES.includes(f), `${prompt}/${who}: unknown feature ${f}`);
+    }
+  }
+});
+
+test('published bundles ship the sprite and style modules the engine needs', () => {
+  const game = generateOffline('a cat ninja in a bamboo forest');
+  const page = defaultPage(game, defaultsFor(arcadeSchema.config));
+  const outDir = join(ROOT, 'dist', '__style_test__');
+  const { files } = buildBundle({ game, page, outDir });
+  for (const needed of ['shared/sprites.js', 'shared/styles.js', 'shared/render.js']) {
+    assert.ok(files.includes(needed), `bundle is missing ${needed} — the published game would not render`);
+  }
+  rmSync(outDir, { recursive: true, force: true });
 });

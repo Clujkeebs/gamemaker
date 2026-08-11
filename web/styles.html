@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rumpus — sprite &amp; style gallery</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🎨</text></svg>">
+<style>
+  body { margin:0; padding:24px; background:#0a0b10; color:#eef1f7;
+         font:14px/1.5 ui-rounded, system-ui, sans-serif; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  h2 { font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:#8f98ae;
+       margin:28px 0 10px; border-bottom:1px solid #242938; padding-bottom:6px; }
+  p.lede { color:#8f98ae; margin:0 0 8px; }
+  .grid { display:flex; flex-wrap:wrap; gap:14px; }
+  .cell { text-align:center; }
+  .cell canvas { display:block; image-rendering:pixelated; background:#151926;
+                 border:1px solid #242938; border-radius:6px; }
+  .cell span { display:block; font-size:10.5px; color:#8f98ae; margin-top:4px;
+               max-width:76px; overflow:hidden; text-overflow:ellipsis; }
+  .row { display:flex; gap:26px; flex-wrap:wrap; }
+  .styleblock { border:1px solid #242938; border-radius:10px; padding:14px; margin-bottom:14px; }
+  .styleblock h3 { margin:0 0 2px; font-size:15px; }
+  .styleblock .blurb { color:#8f98ae; font-size:12.5px; margin:0 0 12px; }
+  .small canvas { width:32px; height:32px; }
+</style>
+</head>
+<body>
+<h1>Sprite &amp; style gallery</h1>
+<p class="lede">Every body plan, feature, and pickup, rendered in every style. This is the page to look at when changing a mask.</p>
+<div id="out"></div>
+
+<script type="module">
+import { BUILDS, OVERLAYS, PICKUPS, composeMask, rampFor, getSprite, RES } from '/shared/sprites.js';
+import { STYLES } from '/shared/styles.js';
+
+const out = document.getElementById('out');
+const PALETTE = { base: '#7ac74f', accent: '#ffd166' };
+
+function cell(spec, style, label, size = 72) {
+  const wrap = document.createElement('div');
+  wrap.className = 'cell';
+  const c = document.createElement('canvas');
+  c.width = size; c.height = size;
+  const ctx = c.getContext('2d');
+  const ramp = rampFor(spec.color ?? PALETTE.base, spec.accent ?? PALETTE.accent, style);
+  const sprite = getSprite(spec, ramp, style, size);
+  sprite.draw(ctx, 0, 0, size, size, 1);
+  const label2 = document.createElement('span');
+  label2.textContent = label;
+  wrap.append(c, label2);
+  return wrap;
+}
+
+function section(title, lede) {
+  const h = document.createElement('h2');
+  h.textContent = title;
+  out.appendChild(h);
+  if (lede) {
+    const p = document.createElement('p');
+    p.className = 'lede';
+    p.textContent = lede;
+    out.appendChild(p);
+  }
+  const g = document.createElement('div');
+  g.className = 'grid';
+  out.appendChild(g);
+  return g;
+}
+
+for (const style of Object.values(STYLES)) {
+  const block = document.createElement('div');
+  block.className = 'styleblock';
+  block.innerHTML = `<h3>${style.label}</h3><p class="blurb">${style.blurb}</p>`;
+  const g = document.createElement('div');
+  g.className = 'grid';
+  for (const build of Object.keys(BUILDS)) {
+    g.appendChild(cell({ build, eyes: 'big', pattern: 'none', features: [] }, style, build));
+  }
+  for (const pickup of Object.keys(PICKUPS)) {
+    g.appendChild(cell({ pickup, color: '#ffd166', accent: '#ffe9a8' }, style, pickup, 48));
+  }
+  block.appendChild(g);
+  out.appendChild(block);
+}
+
+const style = STYLES.pixel;
+
+const feats = section('Features (pixel style, on a biped)', 'Overlays composed onto a body plan.');
+for (const name of Object.keys(OVERLAYS)) {
+  feats.appendChild(cell({ build: 'biped', eyes: 'big', features: name === 'none' ? [] : [name] }, style, name));
+}
+
+const combos = section('Composed characters', 'What the generator actually asks for.');
+const RECIPES = [
+  ['cat ninja', { build: 'quadruped', features: ['earsPointed', 'tail'], eyes: 'angry', pattern: 'stripes' }, '#f4f1de'],
+  ['guard dog', { build: 'quadruped', features: ['earsRound', 'tail'], eyes: 'angry', pattern: 'spots' }, '#c96a4a'],
+  ['robot', { build: 'biped', features: ['antenna', 'visor'], eyes: 'visor', pattern: 'plated' }, '#9fb3c8'],
+  ['ghost', { build: 'ghost', features: [], eyes: 'big', pattern: 'none' }, '#c77dff'],
+  ['knight', { build: 'biped', features: ['horns', 'cape'], eyes: 'angry', pattern: 'plated' }, '#8fa3c4'],
+  ['king slime', { build: 'blob', features: ['crown'], eyes: 'big', pattern: 'belly' }, '#7ee787'],
+  ['beetle', { build: 'bug', features: ['horns'], eyes: 'angry', pattern: 'plated' }, '#b05c3b'],
+  ['fighter', { build: 'ship', features: ['wings'], eyes: 'none', pattern: 'none' }, '#c8f5ff'],
+  ['raccoon', { build: 'quadruped', features: ['earsRound', 'tail'], eyes: 'big', pattern: 'stripes' }, '#c8d3dd'],
+  ['bird', { build: 'bird', features: [], eyes: 'big', pattern: 'belly' }, '#ffd166'],
+  ['fish', { build: 'fish', features: [], eyes: 'big', pattern: 'stripes' }, '#4ecdc4'],
+  ['racer', { build: 'car', features: [], eyes: 'none', pattern: 'none' }, '#ff5d8f'],
+  ['penguin', { build: 'biped', features: ['scarf'], eyes: 'big', pattern: 'belly' }, '#2f3b52'],
+  ['bat', { build: 'blob', features: ['earsPointed', 'wings'], eyes: 'angry', pattern: 'none' }, '#6b5d8a'],
+];
+for (const [label, spec, color] of RECIPES) {
+  combos.appendChild(cell({ ...spec, color }, style, label));
+}
+
+const sizes = section('At real game size', 'The sizes these are actually drawn at in play: 13, 15, 20, 28px.');
+for (const px of [13, 15, 20, 28]) {
+  for (const [label, spec, color] of RECIPES.slice(0, 6)) {
+    const wrap = document.createElement('div');
+    wrap.className = 'cell';
+    const c = document.createElement('canvas');
+    const box = px * 3;
+    c.width = box; c.height = box;
+    c.style.width = `${box}px`;
+    const ctx = c.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    const ramp = rampFor(color, '#ffd166', style);
+    getSprite({ ...spec, color }, ramp, style, px).draw(ctx, box / 2 - px / 2, box / 2 - px / 2, px, px, 1);
+    const s = document.createElement('span');
+    s.textContent = `${label} ${px}px`;
+    wrap.append(c, s);
+    sizes.appendChild(wrap);
+  }
+}
+</script>
+</body>
+</html>

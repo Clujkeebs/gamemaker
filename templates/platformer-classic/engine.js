@@ -6,8 +6,11 @@
 // this file can't do, that's a template switch, not an edit to this file.
 
 import { boot, hit, skyGradient, cameraTarget } from '../../shared/runtime.js';
-import { shape, eyes, shade, mix, rng, hashString } from '../../shared/draw.js';
+import { shade, mix, rng, hashString } from '../../shared/draw.js';
 import { TILE, parseGrid, at, isSolid, findAll, findOne } from '../../shared/tiles.js';
+import { getSprite, rampFor } from '../../shared/sprites.js';
+import { getStyle } from '../../shared/styles.js';
+import { drawTile, drawHazard, drawParticles, drawGoal } from '../../shared/render.js';
 
 const HOOKS = ['doubleJump', 'dash', 'wallJump', 'stomp', 'shoot', 'gravityFlip'];
 
@@ -16,7 +19,16 @@ function makeGame(cfg, rt) {
   const grid = parseGrid(cfg.level.grid);
   const hooks = new Set((cfg.mechanicHooks ?? []).filter((h) => HOOKS.includes(h)));
   const th = cfg.theme;
+  const style = getStyle(cfg.style);
   const rand = rng(hashString(JSON.stringify(cfg.level.grid)) ^ (cfg.seed ?? 7));
+
+  // Built once. Rasterizing is the expensive part; drawing the result is a
+  // single drawImage per entity per frame.
+  const art = {
+    player: getSprite(cfg.entities.player.sprite, rampFor(th.player, th.accent, style), style, cfg.entities.player.size * 2),
+    enemy: getSprite(cfg.entities.enemy.sprite, rampFor(th.enemy, th.accent, style), style, cfg.entities.enemy.size * 2),
+    pickup: getSprite({ pickup: cfg.entities.pickup.icon }, rampFor(th.pickup, th.pickup, style), style, cfg.entities.pickup.size * 2),
+  };
 
   const levelW = grid.w * T;
   const levelH = grid.h * T;
@@ -297,7 +309,7 @@ function makeGame(cfg, rt) {
 
     draw(ctx) {
       skyGradient(ctx, rt.W, rt.H, th.skyTop, th.skyBottom);
-      drawBackdrop(ctx, th, cam, rt, rand);
+      drawBackdrop(ctx, th, cam, rt, rand, style);
 
       ctx.save();
       const sx = shakeT > 0 ? (rand() - 0.5) * 6 : 0;
@@ -315,71 +327,49 @@ function makeGame(cfg, rt) {
           const px = x * T;
           const py = y * T;
           if (ch === TILE.SOLID) {
-            ctx.fillStyle = th.ground;
-            ctx.fillRect(px, py, T, T);
-            if (!isSolid(at(grid, x, y - 1))) {
-              ctx.fillStyle = shade(th.ground, 0.22);
-              ctx.fillRect(px, py, T, Math.max(2, T * 0.2));
-            }
-            ctx.fillStyle = shade(th.ground, -0.18);
-            ctx.fillRect(px, py + T - 1, T, 1);
+            drawTile(ctx, style, px, py, T, T, th.ground, {
+              top: !isSolid(at(grid, x, y - 1)),
+              bottom: !isSolid(at(grid, x, y + 1)),
+              left: !isSolid(at(grid, x - 1, y)),
+              right: !isSolid(at(grid, x + 1, y)),
+            });
           } else if (ch === TILE.ONEWAY) {
-            ctx.fillStyle = shade(th.ground, 0.3);
-            ctx.fillRect(px, py, T, Math.max(3, T * 0.28));
+            // A thin slab across the full tile width, not a small block.
+            const slab = Math.max(3, T * 0.3);
+            drawTile(ctx, style, px, py, T, slab, th.ground, {
+              top: true, bottom: true,
+              left: at(grid, x - 1, y) !== TILE.ONEWAY,
+              right: at(grid, x + 1, y) !== TILE.ONEWAY,
+            });
           } else if (ch === TILE.HAZARD) {
-            ctx.fillStyle = th.hazard;
-            for (let i = 0; i < 3; i++) {
-              const sxp = px + (T / 3) * i;
-              ctx.beginPath();
-              ctx.moveTo(sxp, py + T);
-              ctx.lineTo(sxp + T / 6, py + T * 0.25);
-              ctx.lineTo(sxp + T / 3, py + T);
-              ctx.closePath();
-              ctx.fill();
-            }
+            drawHazard(ctx, style, px, py, T, th.hazard, rt.time);
           }
         }
       }
 
-      if (goalTile) {
-        const gx = goalTile.x * T;
-        const gy = goalTile.y * T;
-        const wave = Math.sin(rt.time * 4) * 2;
-        ctx.fillStyle = shade(th.goal, -0.3);
-        ctx.fillRect(gx + T * 0.16, gy, 2, T);
-        ctx.fillStyle = th.goal;
-        ctx.beginPath();
-        ctx.moveTo(gx + T * 0.22, gy + 2);
-        ctx.lineTo(gx + T * 0.9 + wave, gy + T * 0.26);
-        ctx.lineTo(gx + T * 0.22, gy + T * 0.5);
-        ctx.closePath();
-        ctx.fill();
-      }
+      if (goalTile) drawGoal(ctx, style, goalTile.x * T, goalTile.y * T, T, th.goal, rt.time, 'flag');
 
       for (const p of pickups) {
         if (p.taken) continue;
         const s = cfg.entities.pickup.size;
-        const by = p.y + Math.sin(p.bob) * 2;
-        ctx.globalAlpha = 0.9;
-        shape(ctx, cfg.entities.pickup.shape, p.x - s / 2, by - s / 2, s, s, th.pickup);
-        ctx.globalAlpha = 1;
+        art.pickup.draw(ctx, p.x - s / 2, p.y + Math.sin(p.bob) * 2 - s / 2, s, s, 1);
       }
 
       for (const e of enemies) {
         if (!e.alive) continue;
-        shape(ctx, cfg.entities.enemy.shape, e.x, e.y, e.w, e.h, th.enemy);
-        if (cfg.entities.enemy.eyes) eyes(ctx, e.x, e.y, e.w, e.h, Math.sign(e.vx) || 1);
+        art.enemy.draw(ctx, e.x, e.y, e.w, e.h, Math.sign(e.vx) || 1);
       }
 
+      ctx.save();
+      if (style.tile.mode === 'glow') {
+        ctx.shadowColor = th.accent;
+        ctx.shadowBlur = 6;
+      }
       ctx.fillStyle = th.accent;
       for (const b of bullets) ctx.fillRect(b.x, b.y, b.w, b.h);
+      ctx.restore();
 
-      for (const p of particles) {
-        ctx.globalAlpha = Math.max(0, p.life * 2);
-        ctx.fillStyle = p.color;
-        ctx.fillRect(p.x - 1.5, p.y - 1.5, 3, 3);
-      }
-      ctx.globalAlpha = 1;
+      drawParticles(ctx, style, particles);
 
       // Flicker while invulnerable so the hit actually reads.
       if (!(player.hurtT > 0 && Math.floor(rt.time * 20) % 2)) {
@@ -389,13 +379,11 @@ function makeGame(cfg, rt) {
           ctx.scale(1, -1);
         }
         if (player.dashT > 0) {
-          ctx.globalAlpha = 0.35;
-          shape(ctx, cfg.entities.player.shape, player.x - player.vx * 0.03, player.y,
-                player.w, player.h, th.accent);
+          ctx.globalAlpha = 0.3;
+          art.player.draw(ctx, player.x - player.vx * 0.03, player.y, player.w, player.h, player.facing);
           ctx.globalAlpha = 1;
         }
-        shape(ctx, cfg.entities.player.shape, player.x, player.y, player.w, player.h, th.player);
-        if (cfg.entities.player.eyes) eyes(ctx, player.x, player.y, player.w, player.h, player.facing);
+        art.player.draw(ctx, player.x, player.y, player.w, player.h, player.facing);
         ctx.restore();
       }
       ctx.restore();
@@ -403,12 +391,12 @@ function makeGame(cfg, rt) {
   };
 }
 
-function drawBackdrop(ctx, th, cam, rt, rand) {
+function drawBackdrop(ctx, th, cam, rt, rand, style) {
   const par = -cam.x * 0.35;
   ctx.save();
   // Held well back from the play layer. At full strength the trees and
   // buildings read as level geometry, which is worse than having no backdrop.
-  ctx.globalAlpha = 0.42;
+  ctx.globalAlpha = style.backdropAlpha;
   ctx.fillStyle = mix(th.skyTop, th.ground, 0.35);
   switch (th.backdrop) {
     case 'hills':

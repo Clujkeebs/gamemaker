@@ -1,7 +1,10 @@
 {
-  "_note": "Regression example: tougher wall, slower ball, laser powerup. Exercises the arch pattern and high brick HP.",
+  "_note": "Regression example: tougher wall, slower ball, laser powerup. Exercises the arch pattern, high brick HP, and the storybook style.",
   "seed": 900,
-  "mechanicHooks": ["lasers", "sticky"],
+  "mechanicHooks": [
+    "lasers",
+    "sticky"
+  ],
   "theme": {
     "background": "#0a1420",
     "paddle": "#8be9fd",
@@ -10,8 +13,27 @@
     "brickBottom": "#bfe6ff",
     "accent": "#ffd166"
   },
-  "paddle": { "width": 58, "speed": 300 },
-  "ball": { "size": 8, "speed": 148, "maxSpeed": 240, "accel": 1.2 },
-  "bricks": { "rows": 6, "cols": 12, "hp": 3, "pattern": "arch" },
-  "rules": { "lives": 4, "brickScore": 20, "powerupChance": 0.22 }
+  "paddle": {
+    "width": 58,
+    "speed": 300
+  },
+  "ball": {
+    "size": 8,
+    "speed": 148,
+    "maxSpeed": 240,
+    "accel": 1.2
+  },
+  "bricks": {
+    "rows": 6,
+    "cols": 12,
+    "hp": 3,
+    "pattern": "arch"
+  },
+  "rules": {
+    "lives": 4,
+    "brickScore": 20,
+    "powerupChance": 0.22
+  },
+  "style": "storybook",
+  "powerupIcon": "gem"
 }

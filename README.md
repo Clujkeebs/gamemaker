@@ -17,7 +17,7 @@ you change it by talking to it, and publishes it to a link you can share.
 
 ```bash
 npm start          # http://localhost:4173
-npm test           # 41 tests, no network needed
+npm test           # 54 tests, no network needed
 ```
 
 No install step. No build step. No dependencies — Node 20+ and nothing else.
@@ -47,11 +47,38 @@ Three layers, deliberately decoupled:
 | Layer | What it is | Who edits it | Blast radius |
 |---|---|---|---|
 | **Engine** | Game loop, physics, collision, input | Humans, in this repo | Every game on that template — so it's versioned and pinned per published game |
+| **Sprite parts** | Hand-drawn body plans and feature overlays | Humans, in this repo | Every game that composes them |
 | **Game config** | JSON: theme, entities, level, rules, hooks | The model, from your prompt | One game's gameplay |
 | **Arcade page** | The landing page wrapping the game | The model or a form | One game's presentation |
 
 Restyling a page cannot break a game — the published `game.html` is
 byte-identical across page restyles, and there's a test that asserts it.
+
+### Art direction: composed sprites, one style token
+
+Sprites aren't generated pixel-by-pixel and they aren't image files. They're
+**composed from hand-drawn parts** — a body plan (`quadruped`, `biped`, `ship`,
+`ghost`, `bug`, `bird`, …) plus feature overlays (`earsPointed`, `tail`,
+`visor`, `antenna`, `crown`, `wings`, …), an eye style, and a marking pattern.
+A cat is `quadruped + earsPointed + tail` with stripes. A robot is
+`biped + visor + antenna`. The model picks parts; it never describes art.
+
+And **one `style` token governs everything**: sprite outlines and shading,
+terrain tiles, hazard shapes, particles, HUD chrome, the win/lose screen, and
+the published landing page's fonts, borders and shadows.
+
+| Style | Look |
+|---|---|
+| `pixel` | Hard 1px outlines, flat three-tone shading, mono HUD, hard offset shadows |
+| `neon` | Dark ground, glowing edges, wide-tracked uppercase type |
+| `storybook` | Thick soft outlines, warm paper, serif type, round cards |
+| `clay` | No outlines, soft top-lighting, very round corners |
+
+The page isn't styled to match the game by hand — its palette is computed from
+the game's colours and its CSS from the game's style token, so the two can't
+drift. Switching style in the editor restyles the game and its page together.
+
+Browse every part in every style at `/styles.html`.
 
 ### Four checks stand between the model and a broken game
 
@@ -84,12 +111,12 @@ another that fails if the classifier prompt and the installed set drift apart.
 ## Layout
 
 ```
-shared/       validation, clamping, reachability, draw primitives, game runtime
+shared/       validation, clamping, reachability, sprites, styles, game runtime
 templates/    one directory per archetype: engine.js + schema.json + examples/
 arcade/       the landing-page template and its own config schema
 server/       zero-dep HTTP server, generation pipeline, bundler, deploy, DNS
-web/          the editor
-test/         41 tests, including a mock Claude endpoint
+web/          the editor, plus /styles.html — the sprite and style gallery
+test/         54 tests, including a mock Claude endpoint
 ```
 
 ## Docs

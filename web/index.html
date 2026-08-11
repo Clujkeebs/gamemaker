@@ -17,6 +17,7 @@
     <span class="tag">describe a game · play it · ship it</span>
   </div>
   <div class="status" id="status" role="status"></div>
+  <a class="gallery-link" href="/styles.html" target="_blank" rel="noopener" title="Every sprite part and style">art</a>
 </header>
 
 <main class="app">
@@ -37,6 +38,16 @@
     <div class="divider"></div>
 
     <div class="edit-block">
+      <label class="label" for="styleSelect">Style</label>
+      <select id="styleSelect" disabled title="Art direction for the game and its page">
+        <option value="pixel">Chunky pixel</option>
+        <option value="neon">Neon glow</option>
+        <option value="storybook">Storybook</option>
+        <option value="clay">Soft clay</option>
+      </select>
+
+      <div class="divider"></div>
+
       <label class="label" for="instruction">Change it</label>
       <div class="row tight">
         <input id="instruction" type="text" spellcheck="false" disabled
@@ -88,7 +99,7 @@
 
     <div id="pageEditor" hidden>
       <h2 class="section-title">Its page</h2>
-      <p class="muted tiny">This is the landing page around the game. Editing it can't touch the game.</p>
+      <p class="muted tiny">The page around the game. Copy and colours here can't touch the game — style is shared on purpose, so both stay one look.</p>
       <div class="field">
         <label for="pgTitle">Title</label>
         <input id="pgTitle" type="text" maxlength="60">
@@ -107,12 +118,12 @@
           <input id="pgBg" type="color">
         </div>
         <div>
-          <label for="pgFont">Font</label>
-          <select id="pgFont">
-            <option value="rounded">Rounded</option>
-            <option value="system">System</option>
-            <option value="mono">Mono</option>
-            <option value="serif">Serif</option>
+          <label for="pgStyle">Style</label>
+          <select id="pgStyle" title="Restyles the game and its page together">
+            <option value="pixel">Pixel</option>
+            <option value="neon">Neon</option>
+            <option value="storybook">Storybook</option>
+            <option value="clay">Clay</option>
           </select>
         </div>
       </div>

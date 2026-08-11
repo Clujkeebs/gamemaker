@@ -1,7 +1,10 @@
 {
-  "_note": "Regression example: 'a raccoon robbing a night market, dodging the security guards'. Exercises lantern + collectAll.",
+  "_note": "Regression example: 'a raccoon robbing a night market, dodging the security guards'. Exercises lantern, collectAll, and the storybook style.",
   "seed": 88,
-  "mechanicHooks": ["sprint", "lantern"],
+  "mechanicHooks": [
+    "sprint",
+    "lantern"
+  ],
   "theme": {
     "floor": "#141019",
     "wall": "#5b3f57",
@@ -15,9 +18,35 @@
     "pickupName": "snacks"
   },
   "entities": {
-    "player": { "shape": "round", "size": 12, "eyes": true },
-    "enemy": { "shape": "blob", "size": 13, "speed": 40, "behavior": "guard", "eyes": true },
-    "pickup": { "shape": "circle", "size": 9 }
+    "player": {
+      "size": 12,
+      "sprite": {
+        "build": "quadruped",
+        "features": [
+          "earsRound",
+          "tail"
+        ],
+        "eyes": "big",
+        "pattern": "stripes"
+      }
+    },
+    "enemy": {
+      "size": 13,
+      "speed": 40,
+      "behavior": "guard",
+      "sprite": {
+        "build": "biped",
+        "features": [
+          "scarf"
+        ],
+        "eyes": "angry",
+        "pattern": "none"
+      }
+    },
+    "pickup": {
+      "size": 9,
+      "icon": "fruit"
+    }
   },
   "level": {
     "tileSize": 20,
@@ -33,7 +62,11 @@
       "########################"
     ]
   },
-  "movement": { "speed": 96, "accel": 20, "diagonal": true },
+  "movement": {
+    "speed": 96,
+    "accel": 20,
+    "diagonal": true
+  },
   "rules": {
     "win": "collectAll",
     "goalNeedsAll": false,
@@ -41,5 +74,6 @@
     "lives": 3,
     "timeLimit": 0,
     "pickupScore": 20
-  }
+  },
+  "style": "storybook"
 }

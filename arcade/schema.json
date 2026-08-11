@@ -3,67 +3,163 @@
   "version": "1.0.0",
   "label": "Arcade page",
   "blurb": "The landing page a published game ships inside.",
-  "goodFor": "Presentation only. Nothing here can affect the game — that separation is the point.",
+  "goodFor": "Presentation only. Nothing here can affect the game \u2014 that separation is the point.",
   "reachability": null,
   "mechanicHooks": {},
   "config": {
     "type": "object",
     "fields": {
-      "layout":  { "type": "enum", "values": ["centered", "split"], "default": "centered", "doc": "centered stacks the game under the title; split puts copy beside it on wide screens." },
+      "style": {
+        "type": "enum",
+        "values": [
+          "pixel",
+          "neon",
+          "storybook",
+          "clay"
+        ],
+        "default": "pixel",
+        "doc": "Copied from the game's style at publish time. The page is not styled independently \u2014 changing the game's style restyles the page too."
+      },
+      "layout": {
+        "type": "enum",
+        "values": [
+          "centered",
+          "split"
+        ],
+        "default": "centered",
+        "doc": "centered stacks the game under the title; split puts copy beside it on wide screens."
+      },
       "sections": {
-        "type": "array", "maxItems": 4, "default": ["howTo", "about", "credits"],
-        "of": { "type": "enum", "values": ["howTo", "about", "credits"], "default": "howTo" },
+        "type": "array",
+        "maxItems": 4,
+        "default": [
+          "howTo",
+          "about",
+          "credits"
+        ],
+        "of": {
+          "type": "enum",
+          "values": [
+            "howTo",
+            "about",
+            "credits"
+          ],
+          "default": "howTo"
+        },
         "doc": "Which sections appear, in this order. Omit one to hide it."
       },
       "theme": {
         "type": "object",
         "fields": {
-          "background": { "type": "color", "default": "#0b0d13" },
-          "surface":    { "type": "color", "default": "#151926" },
-          "text":       { "type": "color", "default": "#eef1f7" },
-          "muted":      { "type": "color", "default": "#9aa3b8" },
-          "accent":     { "type": "color", "default": "#ffd166" },
-          "font":       { "type": "enum", "values": ["system", "rounded", "mono", "serif"], "default": "rounded" }
+          "background": {
+            "type": "color",
+            "default": "#0b0d13"
+          },
+          "surface": {
+            "type": "color",
+            "default": "#151926"
+          },
+          "text": {
+            "type": "color",
+            "default": "#eef1f7"
+          },
+          "muted": {
+            "type": "color",
+            "default": "#9aa3b8"
+          },
+          "accent": {
+            "type": "color",
+            "default": "#ffd166"
+          }
         }
       },
       "hero": {
         "type": "object",
         "fields": {
-          "title":    { "type": "string", "maxLength": 60, "default": "Untitled Rumpus" },
-          "tagline":  { "type": "string", "maxLength": 140, "default": "A game that appeared out of a sentence." },
-          "ctaLabel": { "type": "string", "maxLength": 24, "default": "Play" }
+          "title": {
+            "type": "string",
+            "maxLength": 60,
+            "default": "Untitled Rumpus"
+          },
+          "tagline": {
+            "type": "string",
+            "maxLength": 140,
+            "default": "A game that appeared out of a sentence."
+          },
+          "ctaLabel": {
+            "type": "string",
+            "maxLength": 24,
+            "default": "Play"
+          }
         }
       },
       "howTo": {
         "type": "object",
         "fields": {
-          "heading": { "type": "string", "maxLength": 40, "default": "How to play" },
+          "heading": {
+            "type": "string",
+            "maxLength": 40,
+            "default": "How to play"
+          },
           "steps": {
-            "type": "array", "maxItems": 6,
-            "of": { "type": "string", "maxLength": 90, "default": "" },
-            "default": ["Arrows or WASD to move", "Space to jump", "Reach the flag"]
+            "type": "array",
+            "maxItems": 6,
+            "of": {
+              "type": "string",
+              "maxLength": 90,
+              "default": ""
+            },
+            "default": [
+              "Arrows or WASD to move",
+              "Space to jump",
+              "Reach the flag"
+            ]
           }
         }
       },
       "about": {
         "type": "object",
         "fields": {
-          "heading": { "type": "string", "maxLength": 40, "default": "About" },
-          "body":    { "type": "string", "maxLength": 600, "default": "" }
+          "heading": {
+            "type": "string",
+            "maxLength": 40,
+            "default": "About"
+          },
+          "body": {
+            "type": "string",
+            "maxLength": 600,
+            "default": ""
+          }
         }
       },
       "credits": {
         "type": "object",
         "fields": {
-          "heading": { "type": "string", "maxLength": 40, "default": "Credits" },
-          "body":    { "type": "string", "maxLength": 300, "default": "" }
+          "heading": {
+            "type": "string",
+            "maxLength": 40,
+            "default": "Credits"
+          },
+          "body": {
+            "type": "string",
+            "maxLength": 300,
+            "default": ""
+          }
         }
       },
       "footer": {
         "type": "object",
         "fields": {
-          "text":  { "type": "string", "maxLength": 120, "default": "" },
-          "badge": { "type": "bool", "default": true, "doc": "Show the small 'Made with Rumpus' link." }
+          "text": {
+            "type": "string",
+            "maxLength": 120,
+            "default": ""
+          },
+          "badge": {
+            "type": "bool",
+            "default": true,
+            "doc": "Show the small 'Made with Rumpus' link."
+          }
         }
       }
     }

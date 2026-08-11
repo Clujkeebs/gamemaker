@@ -21,16 +21,21 @@ const jsonInScript = (value) =>
     .replace(/\u2028/g, '\\u2028')
     .replace(/\u2029/g, '\\u2029');
 
-const FONTS = {
-  system: 'system-ui, -apple-system, "Segoe UI", sans-serif',
-  rounded: 'ui-rounded, "SF Pro Rounded", "Segoe UI Variable", system-ui, sans-serif',
-  mono: 'ui-monospace, Menlo, Consolas, monospace',
-  serif: 'Iowan Old Style, Georgia, "Times New Roman", serif',
-};
+import { getStyle, pageThemeFrom } from '../shared/styles.js';
 
-/** Sensible page copy derived from the game, so a publish never needs a form. */
+/**
+ * Page copy and look, both derived from the game.
+ *
+ * The style token is COPIED from the game config rather than chosen
+ * separately, and the palette is computed from the game's own colours. That is
+ * the whole point: the landing page is not styled to match the game by hand,
+ * it is generated from the same two inputs, so it cannot drift.
+ */
 export function defaultPage(game, schemaDefaults) {
   const page = structuredClone(schemaDefaults);
+  const style = getStyle(game.config?.style);
+  page.style = style.id;
+  page.theme = { ...page.theme, ...pageThemeFrom(style, game.config?.theme ?? {}) };
   page.hero.title = game.title;
   page.hero.tagline = game.description;
   page.hero.ctaLabel = 'Play';
@@ -80,7 +85,11 @@ function controlsFor(game) {
 
 export function renderArcadePage(page, game, opts = {}) {
   const t = page.theme;
-  const font = FONTS[t.font] ?? FONTS.rounded;
+  // The game's style wins over anything stored on the page, so a restyled game
+  // can never leave its page behind.
+  const style = getStyle(game.config?.style ?? page.style);
+  const s = style.page;
+  const font = s.fontStack;
   const sections = (page.sections ?? []).map((name) => {
     if (name === 'howTo' && page.howTo.steps?.length) {
       return `<section class="card"><h2>${esc(page.howTo.heading)}</h2><ul class="steps">${
@@ -115,6 +124,9 @@ export function renderArcadePage(page, game, opts = {}) {
   :root{
     --bg:${t.background}; --surface:${t.surface}; --text:${t.text};
     --muted:${t.muted}; --accent:${t.accent}; --font:${font};
+    --radius:${s.radius}; --card-radius:${s.cardRadius}; --btn-radius:${s.buttonRadius};
+    --card-border:${s.cardBorder}; --shadow:${s.shadow}; --btn-shadow:${s.buttonShadow};
+    --track:${s.letterSpacing};
   }
   *{box-sizing:border-box}
   html,body{margin:0}
@@ -127,15 +139,16 @@ export function renderArcadePage(page, game, opts = {}) {
   header{text-align:${page.layout === 'split' ? 'left' : 'center'}; margin-bottom:24px}
   h1{
     font-size:clamp(30px,6vw,52px); line-height:1.05; margin:0 0 10px;
-    letter-spacing:-0.02em;
+    letter-spacing:var(--track); font-weight:${s.headingWeight};
+    text-transform:${s.headingCase};
   }
   .tagline{color:var(--muted); font-size:clamp(15px,2.2vw,19px); margin:0 auto; max-width:52ch}
   ${page.layout === 'split' ? '.main{display:grid; grid-template-columns:minmax(0,1.6fr) minmax(260px,1fr); gap:28px; align-items:start}' : '.main{display:block}'}
   @media (max-width:860px){ .main{display:block} }
   .stage{
-    position:relative; background:#000; border-radius:14px; overflow:hidden;
-    aspect-ratio:16/9; box-shadow:0 18px 50px rgba(0,0,0,.45);
-    border:1px solid rgba(255,255,255,.08);
+    position:relative; background:#000; border-radius:var(--radius); overflow:hidden;
+    aspect-ratio:16/9; box-shadow:var(--shadow);
+    border:${s.border === 'none' ? '1px solid rgba(255,255,255,.08)' : s.border};
   }
   .stage iframe{width:100%; height:100%; border:0; display:block}
   .cover{
@@ -146,19 +159,22 @@ export function renderArcadePage(page, game, opts = {}) {
   .play{
     display:inline-flex; align-items:center; gap:10px;
     background:var(--accent); color:#10121a; font-weight:800;
-    font-size:clamp(16px,2.4vw,20px); padding:14px 30px; border-radius:999px;
-    box-shadow:0 8px 24px rgba(0,0,0,.35);
+    font-size:clamp(16px,2.4vw,20px); padding:14px 30px;
+    border-radius:var(--btn-radius); box-shadow:var(--btn-shadow);
+    text-transform:${s.headingCase}; letter-spacing:var(--track);
   }
   .play:hover{transform:translateY(-1px)}
   .cards{margin-top:22px; display:grid; gap:14px}
   ${page.layout === 'split' ? '.side .cards{margin-top:0}' : ''}
-  .card{background:var(--surface); border-radius:12px; padding:18px 20px; border:1px solid rgba(255,255,255,.06)}
-  .card h2{margin:0 0 8px; font-size:15px; text-transform:uppercase; letter-spacing:.09em; color:var(--accent)}
+  .card{background:var(--surface); border-radius:var(--card-radius); padding:18px 20px; border:var(--card-border)}
+  .card h2{margin:0 0 8px; font-size:15px; text-transform:uppercase; letter-spacing:.09em; color:var(--accent); font-weight:${s.headingWeight}}
   .card p{margin:0; color:var(--muted)}
   .steps{margin:0; padding-left:18px; color:var(--muted)}
   .steps li{margin:3px 0}
   footer{margin-top:32px; text-align:center; color:var(--muted); font-size:13px}
   .badge{color:var(--muted); text-decoration:none; border-bottom:1px solid rgba(255,255,255,.15)}
+  /* Style: ${style.id} — ${style.label}. Generated from the game's own style
+     token and palette, so the page and the game are one artifact. */
   .badge b{color:var(--text)}
 </style>
 </head>

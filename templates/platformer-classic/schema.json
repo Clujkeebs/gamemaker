@@ -3,9 +3,19 @@
   "version": "1.0.0",
   "label": "Classic platformer",
   "blurb": "Run, jump, dodge hazards, grab things, reach the flag.",
-  "primaryVerbs": ["jump", "run", "collect", "dodge"],
+  "primaryVerbs": [
+    "jump",
+    "run",
+    "collect",
+    "dodge"
+  ],
   "goodFor": "Side-view games where the core action is jumping between platforms. The safest default when a description is vague.",
-  "reachability": { "kind": "platform", "need": ["G"] },
+  "reachability": {
+    "kind": "platform",
+    "need": [
+      "G"
+    ]
+  },
   "mechanicHooks": {
     "doubleJump": "A second jump in mid-air.",
     "dash": "Shift for a short burst of speed.",
@@ -18,8 +28,8 @@
     ".": "empty air",
     "#": "solid block",
     "-": "one-way platform (jump up through it, land on top)",
-    "P": "player spawn — exactly one, required",
-    "G": "goal flag — required when win is reachGoal",
+    "P": "player spawn \u2014 exactly one, required",
+    "G": "goal flag \u2014 required when win is reachGoal",
     "x": "hazard, costs a life on contact",
     "o": "collectible",
     "e": "enemy spawn"
@@ -27,25 +37,101 @@
   "config": {
     "type": "object",
     "fields": {
-      "seed": { "type": "int", "min": 0, "max": 999999, "default": 7, "doc": "Fixes procedural jitter so a config always renders identically." },
+      "seed": {
+        "type": "int",
+        "min": 0,
+        "max": 999999,
+        "default": 7,
+        "doc": "Fixes procedural jitter so a config always renders identically."
+      },
+      "style": {
+        "type": "enum",
+        "values": [
+          "pixel",
+          "neon",
+          "storybook",
+          "clay"
+        ],
+        "default": "pixel",
+        "doc": "Art direction for the WHOLE game and its landing page: sprite outlines and shading, terrain tiles, hazards, particles, HUD chrome, and the published page's fonts and borders. Pick one that fits the subject and everything follows from it."
+      },
       "mechanicHooks": {
-        "type": "array", "maxItems": 6, "default": [],
-        "of": { "type": "enum", "values": ["doubleJump", "dash", "wallJump", "stomp", "shoot", "gravityFlip"], "default": "doubleJump" }
+        "type": "array",
+        "maxItems": 6,
+        "default": [],
+        "of": {
+          "type": "enum",
+          "values": [
+            "doubleJump",
+            "dash",
+            "wallJump",
+            "stomp",
+            "shoot",
+            "gravityFlip"
+          ],
+          "default": "doubleJump"
+        }
       },
       "theme": {
         "type": "object",
         "fields": {
-          "skyTop":    { "type": "color", "default": "#2b3a67", "doc": "Top of the sky gradient." },
-          "skyBottom": { "type": "color", "default": "#0f1424", "doc": "Bottom of the sky gradient; also the letterbox color." },
-          "ground":    { "type": "color", "default": "#4a5b7d", "doc": "Solid blocks." },
-          "accent":    { "type": "color", "default": "#ffd166", "doc": "Dash trails, bullets, highlights." },
-          "player":    { "type": "color", "default": "#7ee787" },
-          "enemy":     { "type": "color", "default": "#ff6b6b" },
-          "pickup":    { "type": "color", "default": "#ffd166" },
-          "goal":      { "type": "color", "default": "#7ee787" },
-          "hazard":    { "type": "color", "default": "#ff4d6d" },
-          "backdrop":  { "type": "enum", "values": ["none", "hills", "city", "stars", "forest"], "default": "hills" },
-          "pickupName":{ "type": "string", "maxLength": 12, "default": "coins", "doc": "Plural noun shown in the HUD, e.g. 'fish', 'bolts'." }
+          "skyTop": {
+            "type": "color",
+            "default": "#2b3a67",
+            "doc": "Top of the sky gradient."
+          },
+          "skyBottom": {
+            "type": "color",
+            "default": "#0f1424",
+            "doc": "Bottom of the sky gradient; also the letterbox color."
+          },
+          "ground": {
+            "type": "color",
+            "default": "#4a5b7d",
+            "doc": "Solid blocks."
+          },
+          "accent": {
+            "type": "color",
+            "default": "#ffd166",
+            "doc": "Dash trails, bullets, highlights."
+          },
+          "player": {
+            "type": "color",
+            "default": "#7ee787"
+          },
+          "enemy": {
+            "type": "color",
+            "default": "#ff6b6b"
+          },
+          "pickup": {
+            "type": "color",
+            "default": "#ffd166"
+          },
+          "goal": {
+            "type": "color",
+            "default": "#7ee787"
+          },
+          "hazard": {
+            "type": "color",
+            "default": "#ff4d6d"
+          },
+          "backdrop": {
+            "type": "enum",
+            "values": [
+              "none",
+              "hills",
+              "city",
+              "stars",
+              "forest"
+            ],
+            "default": "hills"
+          },
+          "pickupName": {
+            "type": "string",
+            "maxLength": 12,
+            "default": "coins",
+            "doc": "Plural noun shown in the HUD, e.g. 'fish', 'bolts'."
+          }
         }
       },
       "entities": {
@@ -54,26 +140,208 @@
           "player": {
             "type": "object",
             "fields": {
-              "shape": { "type": "enum", "values": ["rect", "round", "circle", "triangle", "diamond", "star", "hexagon", "cross", "blob", "ship", "ghost"], "default": "round" },
-              "size":  { "type": "int", "min": 8, "max": 26, "default": 14, "doc": "Pixels. Must stay under tileSize or the player wedges in gaps." },
-              "eyes":  { "type": "bool", "default": true }
+              "size": {
+                "type": "int",
+                "min": 8,
+                "max": 26,
+                "default": 14,
+                "doc": "Pixels. Must stay under tileSize or the player wedges in gaps."
+              },
+              "sprite": {
+                "type": "object",
+                "doc": "What the player looks like.",
+                "fields": {
+                  "build": {
+                    "type": "enum",
+                    "values": [
+                      "biped",
+                      "blob",
+                      "orb",
+                      "ship",
+                      "ghost",
+                      "bug",
+                      "crystal",
+                      "quadruped",
+                      "bird",
+                      "fish",
+                      "car"
+                    ],
+                    "default": "biped",
+                    "doc": "Body plan. quadruped/bird/fish/car are side-facing and flip to face travel; the rest face the player."
+                  },
+                  "features": {
+                    "type": "array",
+                    "maxItems": 3,
+                    "of": {
+                      "type": "enum",
+                      "values": [
+                        "earsPointed",
+                        "earsRound",
+                        "horns",
+                        "antenna",
+                        "crown",
+                        "visor",
+                        "scarf",
+                        "wings",
+                        "cape",
+                        "tail"
+                      ],
+                      "default": "earsPointed"
+                    },
+                    "default": [],
+                    "doc": "Parts layered on the body. Ears+tail make a quadruped read as a specific animal; visor+antenna make a biped read as a robot."
+                  },
+                  "eyes": {
+                    "type": "enum",
+                    "values": [
+                      "dot",
+                      "big",
+                      "angry",
+                      "visor",
+                      "none"
+                    ],
+                    "default": "big",
+                    "doc": "angry adds a brow, visor/none hide the eyes (use with the visor feature)."
+                  },
+                  "pattern": {
+                    "type": "enum",
+                    "values": [
+                      "none",
+                      "stripes",
+                      "spots",
+                      "belly",
+                      "plated"
+                    ],
+                    "default": "none",
+                    "doc": "Markings painted over plain body pixels only, so they never cover the face."
+                  }
+                }
+              }
             }
           },
           "enemy": {
             "type": "object",
             "fields": {
-              "shape":    { "type": "enum", "values": ["rect", "round", "circle", "triangle", "diamond", "star", "hexagon", "cross", "blob", "ship", "ghost"], "default": "blob" },
-              "size":     { "type": "int", "min": 8, "max": 26, "default": 14 },
-              "speed":    { "type": "number", "min": 10, "max": 110, "default": 42, "doc": "Pixels/sec. Above ~90 a patroller is very hard to dodge." },
-              "behavior": { "type": "enum", "values": ["patrol", "chase", "hop"], "default": "patrol" },
-              "eyes":     { "type": "bool", "default": true }
+              "size": {
+                "type": "int",
+                "min": 8,
+                "max": 26,
+                "default": 14
+              },
+              "speed": {
+                "type": "number",
+                "min": 10,
+                "max": 110,
+                "default": 42,
+                "doc": "Pixels/sec. Above ~90 a patroller is very hard to dodge."
+              },
+              "behavior": {
+                "type": "enum",
+                "values": [
+                  "patrol",
+                  "chase",
+                  "hop"
+                ],
+                "default": "patrol"
+              },
+              "sprite": {
+                "type": "object",
+                "doc": "What the enemies look like.",
+                "fields": {
+                  "build": {
+                    "type": "enum",
+                    "values": [
+                      "biped",
+                      "blob",
+                      "orb",
+                      "ship",
+                      "ghost",
+                      "bug",
+                      "crystal",
+                      "quadruped",
+                      "bird",
+                      "fish",
+                      "car"
+                    ],
+                    "default": "blob",
+                    "doc": "Body plan. quadruped/bird/fish/car are side-facing and flip to face travel; the rest face the player."
+                  },
+                  "features": {
+                    "type": "array",
+                    "maxItems": 3,
+                    "of": {
+                      "type": "enum",
+                      "values": [
+                        "earsPointed",
+                        "earsRound",
+                        "horns",
+                        "antenna",
+                        "crown",
+                        "visor",
+                        "scarf",
+                        "wings",
+                        "cape",
+                        "tail"
+                      ],
+                      "default": "earsPointed"
+                    },
+                    "default": [],
+                    "doc": "Parts layered on the body. Ears+tail make a quadruped read as a specific animal; visor+antenna make a biped read as a robot."
+                  },
+                  "eyes": {
+                    "type": "enum",
+                    "values": [
+                      "dot",
+                      "big",
+                      "angry",
+                      "visor",
+                      "none"
+                    ],
+                    "default": "angry",
+                    "doc": "angry adds a brow, visor/none hide the eyes (use with the visor feature)."
+                  },
+                  "pattern": {
+                    "type": "enum",
+                    "values": [
+                      "none",
+                      "stripes",
+                      "spots",
+                      "belly",
+                      "plated"
+                    ],
+                    "default": "spots",
+                    "doc": "Markings painted over plain body pixels only, so they never cover the face."
+                  }
+                }
+              }
             }
           },
           "pickup": {
             "type": "object",
             "fields": {
-              "shape": { "type": "enum", "values": ["rect", "round", "circle", "triangle", "diamond", "star", "hexagon", "cross", "blob", "ship", "ghost"], "default": "star" },
-              "size":  { "type": "int", "min": 5, "max": 16, "default": 9 }
+              "size": {
+                "type": "int",
+                "min": 5,
+                "max": 16,
+                "default": 9
+              },
+              "icon": {
+                "type": "enum",
+                "values": [
+                  "coin",
+                  "gem",
+                  "star",
+                  "heart",
+                  "key",
+                  "orb",
+                  "fruit",
+                  "bolt",
+                  "shell",
+                  "skull"
+                ],
+                "default": "coin",
+                "doc": "Which collectible icon to draw. Pick one that matches theme.pickupName."
+              }
             }
           }
         }
@@ -81,10 +349,28 @@
       "level": {
         "type": "object",
         "fields": {
-          "tileSize": { "type": "int", "min": 12, "max": 32, "default": 18, "doc": "Pixels per tile. 18 gives ~26x15 tiles on screen." },
+          "tileSize": {
+            "type": "int",
+            "min": 12,
+            "max": 32,
+            "default": 18,
+            "doc": "Pixels per tile. 18 gives ~26x15 tiles on screen."
+          },
           "grid": {
-            "type": "grid", "minRows": 6, "maxRows": 30, "maxCols": 70,
-            "tiles": [".", "#", "-", "P", "G", "x", "o", "e"],
+            "type": "grid",
+            "minRows": 6,
+            "maxRows": 30,
+            "maxCols": 70,
+            "tiles": [
+              ".",
+              "#",
+              "-",
+              "P",
+              "G",
+              "x",
+              "o",
+              "e"
+            ],
             "doc": "Rows of equal length. Needs exactly one P, and a G when win is reachGoal.",
             "default": [
               "..............................",
@@ -102,21 +388,79 @@
       "physics": {
         "type": "object",
         "fields": {
-          "gravity":   { "type": "number", "min": 300, "max": 1600, "default": 720, "doc": "px/s². Below 450 feels like the moon; above 1200 jumps get twitchy." },
-          "moveSpeed": { "type": "number", "min": 40, "max": 200, "default": 96, "doc": "px/s horizontal top speed." },
-          "jumpPower": { "type": "number", "min": 140, "max": 380, "default": 262, "doc": "px/s upward launch. Jump height ≈ jumpPower²/(2·gravity)." },
-          "friction":  { "type": "number", "min": 4, "max": 30, "default": 14, "doc": "Higher is snappier, lower is icier." }
+          "gravity": {
+            "type": "number",
+            "min": 300,
+            "max": 1600,
+            "default": 720,
+            "doc": "px/s\u00b2. Below 450 feels like the moon; above 1200 jumps get twitchy."
+          },
+          "moveSpeed": {
+            "type": "number",
+            "min": 40,
+            "max": 200,
+            "default": 96,
+            "doc": "px/s horizontal top speed."
+          },
+          "jumpPower": {
+            "type": "number",
+            "min": 140,
+            "max": 380,
+            "default": 262,
+            "doc": "px/s upward launch. Jump height \u2248 jumpPower\u00b2/(2\u00b7gravity)."
+          },
+          "friction": {
+            "type": "number",
+            "min": 4,
+            "max": 30,
+            "default": 14,
+            "doc": "Higher is snappier, lower is icier."
+          }
         }
       },
       "rules": {
         "type": "object",
         "fields": {
-          "win":             { "type": "enum", "values": ["reachGoal", "collectAll", "survive"], "default": "reachGoal" },
-          "goalNeedsAll":    { "type": "bool", "default": false, "doc": "With win=reachGoal, also require every collectible first." },
-          "surviveSeconds":  { "type": "number", "min": 10, "max": 180, "default": 45, "doc": "Only used when win is survive." },
-          "lives":           { "type": "int", "min": 1, "max": 9, "default": 3 },
-          "timeLimit":       { "type": "number", "min": 0, "max": 600, "default": 0, "doc": "Seconds; 0 means no timer." },
-          "pickupScore":     { "type": "int", "min": 1, "max": 500, "default": 10 }
+          "win": {
+            "type": "enum",
+            "values": [
+              "reachGoal",
+              "collectAll",
+              "survive"
+            ],
+            "default": "reachGoal"
+          },
+          "goalNeedsAll": {
+            "type": "bool",
+            "default": false,
+            "doc": "With win=reachGoal, also require every collectible first."
+          },
+          "surviveSeconds": {
+            "type": "number",
+            "min": 10,
+            "max": 180,
+            "default": 45,
+            "doc": "Only used when win is survive."
+          },
+          "lives": {
+            "type": "int",
+            "min": 1,
+            "max": 9,
+            "default": 3
+          },
+          "timeLimit": {
+            "type": "number",
+            "min": 0,
+            "max": 600,
+            "default": 0,
+            "doc": "Seconds; 0 means no timer."
+          },
+          "pickupScore": {
+            "type": "int",
+            "min": 1,
+            "max": 500,
+            "default": 10
+          }
         }
       }
     }

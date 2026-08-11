@@ -156,7 +156,61 @@ type.
 A user fiddling with their page's font can't produce a game that won't load, and
 that property is worth more than any convenience gained by merging them.
 
-## 7. Running without credentials
+## 7. Art direction
+
+Generated games need to look deliberate, and "deliberate" mostly means
+*consistent*. Two mechanisms carry that.
+
+### Sprites are composed, not described
+
+There is no image generation and no asset pipeline. Characters are built from a
+library of hand-drawn 16x16 body plans (`biped`, `quadruped`, `ghost`, `ship`,
+`bug`, `bird`, `fish`, `car`, …) with hand-drawn feature overlays layered on
+(`earsPointed`, `tail`, `visor`, `antenna`, `horns`, `crown`, `wings`, …), plus
+an eye style and a marking pattern. A cat is `quadruped + earsPointed + tail`
+with stripes; a robot is `biped + visor + antenna`.
+
+The generator's only job is to pick parts — the same "configure, don't invent"
+rule the whole product runs on. That matters because the obvious alternative,
+random symmetric noise, reliably produces mush. A silhouette someone drew reads
+as a creature; a silhouette a PRNG drew reads as a mistake.
+
+Details that carry most of the quality, and are easy to get wrong:
+
+- **Front-facing plans are authored as an 8-wide half and mirrored**, so
+  symmetry is exact rather than approximate. Side-facing plans are authored full
+  width and flipped to face travel — and they need their **own** overlay
+  variants, because a front-facing ear mask lands on a side-view creature's back.
+- **Patterns only paint over plain body pixels**, so a stripe can never cover a
+  face, and stripes run across the spine (vertical on a side view, horizontal
+  head-on) — backwards, and a tiger reads as a creature wearing a belt.
+- **Rasterizing is cached** per (parts + palette + style + size); drawing is one
+  `drawImage` per entity per frame.
+
+`web/styles.html` renders every part in every style. It is the page to look at
+before and after changing a mask.
+
+### One style token governs everything
+
+`style` is a single enum — `pixel`, `neon`, `storybook`, `clay` — and it drives
+every visual layer: sprite outlines and shading, terrain tiles, hazard shapes,
+particles, HUD chrome, the win/lose overlay, and **the published landing page's
+fonts, borders, and shadows**.
+
+The page is not styled to match the game by hand. Its palette is computed from
+the game's own colours and its CSS from the game's own style token, so the two
+cannot drift. A stale style stored on a page loses to the game's current one.
+
+Colour stays separate from style on purpose: the palette comes from the theme,
+the style says how that palette is rendered. That split is what lets "a haunted
+library" and "a candy factory" share a style and still look like themselves.
+
+One rendering subtlety worth stating, because it's the difference between
+terrain and confetti: **tiles are drawn with their neighbours**. Only exposed
+corners get rounded and only exposed edges get an outline. Round every corner
+and a run of ground becomes a row of separate balls.
+
+## 8. Running without credentials
 
 Neither an API key nor a hosting token is required to run the whole loop.
 
@@ -172,7 +226,7 @@ Neither an API key nor a hosting token is required to run the whole loop.
 This is a deliberate cost: a demo that dies on a missing environment variable is
 a demo that dies.
 
-## 8. Failure modes worth designing for now
+## 9. Failure modes worth designing for now
 
 These are the ones that will actually bite, listed so they're a decision rather
 than a surprise.

@@ -1,7 +1,10 @@
 {
-  "_note": "Regression example: 'a cat ninja sneaking through a bamboo forest, dodging guard dogs'.",
+  "_note": "Regression example: 'a cat ninja sneaking through a bamboo forest, dodging guard dogs'. Side-facing sprites, pixel style.",
   "seed": 41,
-  "mechanicHooks": ["doubleJump", "stomp"],
+  "mechanicHooks": [
+    "doubleJump",
+    "stomp"
+  ],
   "theme": {
     "skyTop": "#1d4f3f",
     "skyBottom": "#0a1a16",
@@ -16,9 +19,36 @@
     "pickupName": "scrolls"
   },
   "entities": {
-    "player": { "shape": "round", "size": 13, "eyes": true },
-    "enemy": { "shape": "blob", "size": 14, "speed": 38, "behavior": "patrol", "eyes": true },
-    "pickup": { "shape": "diamond", "size": 9 }
+    "player": {
+      "size": 13,
+      "sprite": {
+        "build": "quadruped",
+        "features": [
+          "earsPointed",
+          "tail"
+        ],
+        "eyes": "angry",
+        "pattern": "stripes"
+      }
+    },
+    "enemy": {
+      "size": 14,
+      "speed": 38,
+      "behavior": "patrol",
+      "sprite": {
+        "build": "quadruped",
+        "features": [
+          "earsRound",
+          "tail"
+        ],
+        "eyes": "angry",
+        "pattern": "spots"
+      }
+    },
+    "pickup": {
+      "size": 9,
+      "icon": "gem"
+    }
   },
   "level": {
     "tileSize": 18,
@@ -33,7 +63,12 @@
       "##############################"
     ]
   },
-  "physics": { "gravity": 760, "moveSpeed": 104, "jumpPower": 268, "friction": 16 },
+  "physics": {
+    "gravity": 760,
+    "moveSpeed": 104,
+    "jumpPower": 268,
+    "friction": 16
+  },
   "rules": {
     "win": "reachGoal",
     "goalNeedsAll": false,
@@ -41,5 +76,6 @@
     "lives": 3,
     "timeLimit": 0,
     "pickupScore": 25
-  }
+  },
+  "style": "pixel"
 }

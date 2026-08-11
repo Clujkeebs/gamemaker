@@ -5,7 +5,10 @@
 // hand-authored grid, which makes "unwinnable layout" structurally impossible.
 
 import { boot, hit } from '../../shared/runtime.js';
-import { shape, shade, mix, rng } from '../../shared/draw.js';
+import { shade, mix, rng } from '../../shared/draw.js';
+import { getSprite, rampFor } from '../../shared/sprites.js';
+import { getStyle } from '../../shared/styles.js';
+import { drawTile, drawParticles } from '../../shared/render.js';
 
 const HOOKS = ['multiball', 'sticky', 'lasers', 'widen'];
 const PATTERNS = ['solid', 'checker', 'pyramid', 'gaps', 'arch'];
@@ -13,7 +16,9 @@ const PATTERNS = ['solid', 'checker', 'pyramid', 'gaps', 'arch'];
 function makeGame(cfg, rt) {
   const th = cfg.theme;
   const hooks = new Set((cfg.mechanicHooks ?? []).filter((h) => HOOKS.includes(h)));
+  const style = getStyle(cfg.style);
   const rand = rng((cfg.seed ?? 11) || 11);
+  const powerupArt = getSprite({ pickup: cfg.powerupIcon ?? 'star' }, rampFor(th.accent, th.accent, style), style, 20);
   const W = rt.W;
   const H = rt.H;
 
@@ -264,20 +269,26 @@ function makeGame(cfg, rt) {
 
       for (const br of bricks) {
         const c = brickColor(br);
-        ctx.fillStyle = br.hp > 1 ? shade(c, -0.2) : c;
-        ctx.fillRect(br.x, br.y, br.w, br.h);
-        ctx.fillStyle = shade(c, 0.25);
-        ctx.fillRect(br.x, br.y, br.w, 2);
+        // Bricks are terrain: same tile renderer as every other solid thing, so
+        // a style change reaches the wall too.
+        drawTile(ctx, style, br.x, br.y, br.w, br.h, br.hp > 1 ? shade(c, -0.16) : c,
+                 { top: true, bottom: true, left: true, right: true });
         if (br.hp > 1) {
-          ctx.fillStyle = 'rgba(255,255,255,0.28)';
+          ctx.fillStyle = 'rgba(255,255,255,0.3)';
           ctx.fillRect(br.x + br.w / 2 - 4, br.y + br.h / 2 - 1, 8, 2);
         }
       }
 
+      ctx.save();
+      if (style.tile.mode === 'glow') {
+        ctx.shadowColor = paddle.sticky > 0 ? th.accent : th.paddle;
+        ctx.shadowBlur = 10;
+      }
       ctx.fillStyle = paddle.sticky > 0 ? th.accent : th.paddle;
       ctx.beginPath();
-      ctx.roundRect(paddle.x, paddle.y, paddle.w, paddle.h, 4);
+      ctx.roundRect(paddle.x, paddle.y, paddle.w, paddle.h, Math.min(paddle.h / 2, style.tile.radius + 2));
       ctx.fill();
+      ctx.restore();
       if (paddle.lasers > 0) {
         ctx.fillStyle = th.accent;
         ctx.fillRect(paddle.x + 2, paddle.y - 3, 3, 3);
@@ -287,28 +298,27 @@ function makeGame(cfg, rt) {
       ctx.fillStyle = th.accent;
       for (const s of shots) ctx.fillRect(s.x, s.y, 2, 7);
 
-      for (const d of drops) {
-        shape(ctx, 'diamond', d.x - 5, d.y - 5, 10, 10, th.accent);
-      }
+      for (const d of drops) powerupArt.draw(ctx, d.x - 6, d.y - 6, 12, 12, 1);
 
+      ctx.save();
+      if (style.tile.mode === 'glow') {
+        ctx.shadowColor = th.ball;
+        ctx.shadowBlur = 12;
+      }
       ctx.fillStyle = th.ball;
       for (const ball of balls) {
         ctx.beginPath();
         ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
         ctx.fill();
       }
+      ctx.restore();
 
-      for (const p of particles) {
-        ctx.globalAlpha = Math.max(0, p.life * 3);
-        ctx.fillStyle = p.color;
-        ctx.fillRect(p.x - 1.5, p.y - 1.5, 3, 3);
-      }
-      ctx.globalAlpha = 1;
+      drawParticles(ctx, style, particles);
 
       if (balls.some((b2) => b2.stuck)) {
         ctx.textAlign = 'center';
         ctx.fillStyle = 'rgba(255,255,255,0.6)';
-        ctx.font = '500 11px system-ui, sans-serif';
+        ctx.font = style.overlay.body;
         ctx.fillText('space or click to launch', W / 2, H - 8);
         ctx.textAlign = 'left';
       }

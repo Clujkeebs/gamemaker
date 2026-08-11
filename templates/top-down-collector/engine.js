@@ -5,8 +5,11 @@
 // fewer ways for a generated level to be unplayable.
 
 import { boot, hit, cameraTarget } from '../../shared/runtime.js';
-import { shape, eyes, shade, mix, rng, hashString } from '../../shared/draw.js';
+import { shade, mix, rng, hashString } from '../../shared/draw.js';
 import { TILE, parseGrid, at, isSolid, findAll, findOne } from '../../shared/tiles.js';
+import { getSprite, rampFor } from '../../shared/sprites.js';
+import { getStyle } from '../../shared/styles.js';
+import { drawTile, drawHazard, drawParticles, drawGoal } from '../../shared/render.js';
 
 const HOOKS = ['dash', 'sprint', 'lantern', 'magnet'];
 
@@ -15,7 +18,14 @@ function makeGame(cfg, rt) {
   const grid = parseGrid(cfg.level.grid);
   const hooks = new Set((cfg.mechanicHooks ?? []).filter((h) => HOOKS.includes(h)));
   const th = cfg.theme;
+  const style = getStyle(cfg.style);
   const rand = rng(hashString(JSON.stringify(cfg.level.grid)) ^ (cfg.seed ?? 3));
+
+  const art = {
+    player: getSprite(cfg.entities.player.sprite, rampFor(th.player, th.accent, style), style, cfg.entities.player.size * 2),
+    enemy: getSprite(cfg.entities.enemy.sprite, rampFor(th.enemy, th.accent, style), style, cfg.entities.enemy.size * 2),
+    pickup: getSprite({ pickup: cfg.entities.pickup.icon }, rampFor(th.pickup, th.pickup, style), style, cfg.entities.pickup.size * 2),
+  };
 
   const levelW = grid.w * T;
   const levelH = grid.h * T;
@@ -247,62 +257,42 @@ function makeGame(cfg, rt) {
           const px = x * T;
           const py = y * T;
           if (ch === TILE.SOLID) {
-            ctx.fillStyle = th.wall;
-            ctx.fillRect(px, py, T, T);
-            ctx.fillStyle = shade(th.wall, 0.16);
-            ctx.fillRect(px, py, T, Math.max(2, T * 0.16));
+            drawTile(ctx, style, px, py, T, T, th.wall, {
+              top: !isSolid(at(grid, x, y - 1)),
+              bottom: !isSolid(at(grid, x, y + 1)),
+              left: !isSolid(at(grid, x - 1, y)),
+              right: !isSolid(at(grid, x + 1, y)),
+            });
           } else {
             if (th.floorPattern === 'checker' && (x + y) % 2 === 0) {
-              ctx.fillStyle = shade(th.floor, 0.045);
+              ctx.fillStyle = shade(th.floor, 0.05);
               ctx.fillRect(px, py, T, T);
             } else if (th.floorPattern === 'grid') {
-              ctx.strokeStyle = shade(th.floor, 0.07);
+              ctx.strokeStyle = shade(th.floor, 0.08);
               ctx.lineWidth = 1;
               ctx.strokeRect(px + 0.5, py + 0.5, T - 1, T - 1);
             }
-            if (ch === TILE.HAZARD) {
-              ctx.fillStyle = th.hazard;
-              ctx.globalAlpha = 0.75 + Math.sin(rt.time * 6 + x) * 0.15;
-              ctx.fillRect(px + 2, py + 2, T - 4, T - 4);
-              ctx.globalAlpha = 1;
-            }
+            if (ch === TILE.HAZARD) drawHazard(ctx, style, px, py, T, th.hazard, rt.time);
           }
         }
       }
 
-      if (goalTile) {
-        const gx = goalTile.x * T;
-        const gy = goalTile.y * T;
-        const pulse = 0.6 + Math.sin(rt.time * 3) * 0.25;
-        ctx.globalAlpha = pulse;
-        ctx.fillStyle = th.goal;
-        ctx.fillRect(gx + 1, gy + 1, T - 2, T - 2);
-        ctx.globalAlpha = 1;
-        ctx.fillStyle = shade(th.goal, 0.4);
-        ctx.fillRect(gx + T * 0.3, gy + T * 0.3, T * 0.4, T * 0.4);
-      }
+      if (goalTile) drawGoal(ctx, style, goalTile.x * T, goalTile.y * T, T, th.goal, rt.time, 'pad');
 
       for (const p of pickups) {
         if (p.taken) continue;
         const s = cfg.entities.pickup.size;
-        shape(ctx, cfg.entities.pickup.shape, p.x - s / 2, p.y - s / 2 + Math.sin(p.bob) * 1.5, s, s, th.pickup);
+        art.pickup.draw(ctx, p.x - s / 2, p.y - s / 2 + Math.sin(p.bob) * 1.5, s, s, 1);
       }
 
       for (const e of enemies) {
-        shape(ctx, cfg.entities.enemy.shape, e.x, e.y, e.w, e.h, th.enemy);
-        if (cfg.entities.enemy.eyes) eyes(ctx, e.x, e.y, e.w, e.h, Math.sign(e.vx) || 1);
+        art.enemy.draw(ctx, e.x, e.y, e.w, e.h, Math.sign(e.vx) || 1);
       }
 
-      for (const p of particles) {
-        ctx.globalAlpha = Math.max(0, p.life * 2.4);
-        ctx.fillStyle = p.color;
-        ctx.fillRect(p.x - 1.5, p.y - 1.5, 3, 3);
-      }
-      ctx.globalAlpha = 1;
+      drawParticles(ctx, style, particles);
 
       if (!(player.hurtT > 0 && Math.floor(rt.time * 20) % 2)) {
-        shape(ctx, cfg.entities.player.shape, player.x, player.y, player.w, player.h, th.player);
-        if (cfg.entities.player.eyes) eyes(ctx, player.x, player.y, player.w, player.h, player.facing);
+        art.player.draw(ctx, player.x, player.y, player.w, player.h, player.facing);
       }
       ctx.restore();
 

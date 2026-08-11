@@ -5,14 +5,22 @@
 // is no such thing as an unreachable objective here.
 
 import { boot, hit } from '../../shared/runtime.js';
-import { shape, eyes, shade, mix, rng, hashString } from '../../shared/draw.js';
+import { shade, mix, rng } from '../../shared/draw.js';
+import { getSprite, rampFor } from '../../shared/sprites.js';
+import { getStyle } from '../../shared/styles.js';
+import { drawTile, drawParticles } from '../../shared/render.js';
 
 const HOOKS = ['spread', 'pierce', 'dashRoll', 'shield', 'homing'];
 
 function makeGame(cfg, rt) {
   const th = cfg.theme;
+  const style = getStyle(cfg.style);
   const hooks = new Set((cfg.mechanicHooks ?? []).filter((h) => HOOKS.includes(h)));
   const rand = rng((cfg.seed ?? 5) || 5);
+  const art = {
+    player: getSprite(cfg.entities.player.sprite, rampFor(th.player, th.accent, style), style, cfg.entities.player.size * 2),
+    enemy: getSprite(cfg.entities.enemy.sprite, rampFor(th.enemy, th.accent, style), style, cfg.entities.enemy.size * 2),
+  };
   const W = rt.W;
   const H = rt.H;
   const M = 10; // arena wall inset
@@ -277,7 +285,7 @@ function makeGame(cfg, rt) {
       if (shakeT > 0) ctx.translate((rand() - 0.5) * 6, (rand() - 0.5) * 6);
 
       if (th.floorPattern !== 'none') {
-        ctx.strokeStyle = shade(th.floor, 0.06);
+        ctx.strokeStyle = shade(th.floor, 0.08);
         ctx.lineWidth = 1;
         for (let x = M; x < W - M; x += 24) {
           ctx.beginPath();
@@ -297,16 +305,13 @@ function makeGame(cfg, rt) {
       ctx.lineWidth = 3;
       ctx.strokeRect(M - 1.5, M - 1.5, W - 2 * M + 3, H - 2 * M + 3);
 
-      for (const c of cover) {
-        ctx.fillStyle = th.wall;
-        ctx.fillRect(c.x, c.y, c.w, c.h);
-        ctx.fillStyle = shade(th.wall, 0.18);
-        ctx.fillRect(c.x, c.y, c.w, Math.max(2, c.h * 0.16));
-      }
+      // Cover uses the same tile renderer as every other solid thing, so a
+      // style change reaches it too. Each block stands alone: all edges exposed.
+      const allOpen = { top: true, bottom: true, left: true, right: true };
+      for (const c of cover) drawTile(ctx, style, c.x, c.y, c.w, c.h, th.wall, allOpen);
 
       for (const e of enemies) {
-        shape(ctx, cfg.entities.enemy.shape, e.x, e.y, e.w, e.h, th.enemy);
-        if (cfg.entities.enemy.eyes) eyes(ctx, e.x, e.y, e.w, e.h, Math.sign(e.vx) || 1);
+        art.enemy.draw(ctx, e.x, e.y, e.w, e.h, Math.sign(e.vx) || 1);
       }
 
       ctx.fillStyle = th.accent;
@@ -318,12 +323,7 @@ function makeGame(cfg, rt) {
         ctx.fill();
       }
 
-      for (const p of particles) {
-        ctx.globalAlpha = Math.max(0, p.life * 2.5);
-        ctx.fillStyle = p.color;
-        ctx.fillRect(p.x - 1.5, p.y - 1.5, 3, 3);
-      }
-      ctx.globalAlpha = 1;
+      drawParticles(ctx, style, particles);
 
       if (!(player.hurtT > 0 && Math.floor(rt.time * 20) % 2)) {
         const pcx = player.x + player.w / 2;
@@ -331,7 +331,7 @@ function makeGame(cfg, rt) {
         ctx.save();
         ctx.translate(pcx, pcy);
         ctx.rotate(player.aim + Math.PI / 2);
-        shape(ctx, cfg.entities.player.shape, -player.w / 2, -player.h / 2, player.w, player.h, th.player);
+        art.player.draw(ctx, -player.w / 2, -player.h / 2, player.w, player.h, 1);
         ctx.restore();
         // Barrel: the only reliable way to tell where you're aiming.
         ctx.strokeStyle = th.accent;
@@ -353,7 +353,7 @@ function makeGame(cfg, rt) {
       if (betweenWaves) {
         ctx.textAlign = 'center';
         ctx.fillStyle = mix(th.accent, '#ffffff', 0.2);
-        ctx.font = '700 16px system-ui, sans-serif';
+        ctx.font = style.overlay.body;
         ctx.fillText(`WAVE ${wave + 1}`, W / 2, H / 2);
         ctx.textAlign = 'left';
       }

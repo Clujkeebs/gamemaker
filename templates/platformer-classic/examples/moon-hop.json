@@ -1,7 +1,9 @@
 {
-  "_note": "Regression example: low gravity, collect-everything-then-exit. Exercises goalNeedsAll and a timer.",
+  "_note": "Regression example: low gravity, collect-everything-then-exit. Exercises goalNeedsAll, a timer, and the neon style.",
   "seed": 202,
-  "mechanicHooks": ["dash"],
+  "mechanicHooks": [
+    "dash"
+  ],
   "theme": {
     "skyTop": "#241a3d",
     "skyBottom": "#0a0713",
@@ -16,9 +18,33 @@
     "pickupName": "cores"
   },
   "entities": {
-    "player": { "shape": "ship", "size": 14, "eyes": false },
-    "enemy": { "shape": "ghost", "size": 15, "speed": 30, "behavior": "hop", "eyes": true },
-    "pickup": { "shape": "hexagon", "size": 10 }
+    "player": {
+      "size": 14,
+      "sprite": {
+        "build": "biped",
+        "features": [
+          "visor",
+          "antenna"
+        ],
+        "eyes": "visor",
+        "pattern": "plated"
+      }
+    },
+    "enemy": {
+      "size": 15,
+      "speed": 30,
+      "behavior": "hop",
+      "sprite": {
+        "build": "ghost",
+        "features": [],
+        "eyes": "angry",
+        "pattern": "none"
+      }
+    },
+    "pickup": {
+      "size": 10,
+      "icon": "bolt"
+    }
   },
   "level": {
     "tileSize": 18,
@@ -34,7 +60,12 @@
       "###########################"
     ]
   },
-  "physics": { "gravity": 380, "moveSpeed": 88, "jumpPower": 300, "friction": 9 },
+  "physics": {
+    "gravity": 380,
+    "moveSpeed": 88,
+    "jumpPower": 300,
+    "friction": 9
+  },
   "rules": {
     "win": "reachGoal",
     "goalNeedsAll": true,
@@ -42,5 +73,6 @@
     "lives": 3,
     "timeLimit": 120,
     "pickupScore": 40
-  }
+  },
+  "style": "neon"
 }

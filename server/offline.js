@@ -8,6 +8,7 @@
 import { rng, hashString, mix } from '../shared/draw.js';
 import { checkLevel, repairLevel } from '../shared/levelcheck.js';
 import { get, exampleConfig } from './registry.js';
+import { STYLE_NAMES } from '../shared/styles.js';
 
 // --- classification ---------------------------------------------------------
 
@@ -95,6 +96,87 @@ function noun(prompt, fallback = 'loot') {
   // Match the plural we display, but accept the singular in the prompt.
   const found = COLLECTIBLES.find((c) => text.includes(c) || text.includes(c.replace(/s$/, '')));
   return (found ?? fallback).slice(0, 12);
+}
+
+// --- art direction ----------------------------------------------------------
+
+// Which style a prompt is asking for, when it doesn't say. These are the words
+// that actually imply a look rather than a subject.
+const STYLE_SIGNALS = {
+  neon: ['neon', 'cyber', 'synthwave', 'arcade', 'retrowave', 'hologram', 'laser', 'glow', 'vapor', 'techno', 'night city', 'blade'],
+  storybook: ['storybook', 'fairy', 'fairytale', 'picture book', 'hand drawn', 'watercolour', 'watercolor', 'cosy', 'cozy', 'woodland', 'medieval', 'folk', 'library', 'village'],
+  clay: ['clay', 'plasticine', 'toy', 'soft', 'cute', 'pastel', 'bouncy', 'squishy', 'candy', 'plush', 'rounded', 'kid'],
+  pixel: ['pixel', '8-bit', '8 bit', '16-bit', '16 bit', 'retro', 'nes', 'gameboy', 'chunky', 'classic'],
+};
+
+function pickStyle(prompt) {
+  const text = prompt.toLowerCase();
+  let best = null;
+  let bestScore = 0;
+  for (const [name, words] of Object.entries(STYLE_SIGNALS)) {
+    const score = words.reduce((n, w) => n + (text.includes(w) ? (w.includes(' ') ? 2 : 1) : 0), 0);
+    if (score > bestScore) {
+      bestScore = score;
+      best = name;
+    }
+  }
+  // Pixel is the default for the same reason platformer-classic is: it is the
+  // most robust choice when the prompt gives you nothing to go on.
+  return STYLE_NAMES.includes(best) ? best : 'pixel';
+}
+
+// Creature words → a body plan and the parts that make it recognisable. Order
+// matters: the first match wins, so put specific animals before general ones.
+const CREATURES = [
+  [['cat', 'kitten', 'tiger', 'lion', 'panther', 'ninja cat'], { build: 'quadruped', features: ['earsPointed', 'tail'], pattern: 'stripes' }],
+  [['dog', 'puppy', 'wolf', 'fox', 'hound', 'corgi'], { build: 'quadruped', features: ['earsPointed', 'tail'], pattern: 'none' }],
+  [['raccoon', 'badger', 'possum', 'squirrel', 'rat', 'mouse', 'hamster'], { build: 'quadruped', features: ['earsRound', 'tail'], pattern: 'stripes' }],
+  [['bear', 'panda', 'sheep', 'cow', 'pig', 'goat', 'horse', 'deer'], { build: 'quadruped', features: ['earsRound', 'tail'], pattern: 'spots' }],
+  [['bird', 'chicken', 'duck', 'penguin', 'owl', 'crow', 'parrot', 'chick'], { build: 'bird', features: [], pattern: 'belly' }],
+  [['fish', 'shark', 'salmon', 'koi', 'eel', 'whale', 'dolphin'], { build: 'fish', features: [], pattern: 'stripes' }],
+  [['robot', 'android', 'droid', 'mech', 'machine', 'cyborg'], { build: 'biped', features: ['visor', 'antenna'], eyes: 'visor', pattern: 'plated' }],
+  [['ghost', 'spirit', 'phantom', 'spectre', 'specter', 'wraith'], { build: 'ghost', features: [], pattern: 'none' }],
+  [['slime', 'blob', 'goo', 'jelly', 'ooze', 'pudding'], { build: 'blob', features: [], pattern: 'belly' }],
+  [['bug', 'beetle', 'ant', 'spider', 'wasp', 'bee', 'insect', 'roach'], { build: 'bug', features: ['horns'], pattern: 'plated' }],
+  [['ship', 'rocket', 'spacecraft', 'fighter', 'shuttle', 'ufo'], { build: 'ship', features: [], eyes: 'none', pattern: 'none' }],
+  [['car', 'kart', 'truck', 'racer', 'buggy', 'van'], { build: 'car', features: [], eyes: 'none', pattern: 'none' }],
+  [['knight', 'warrior', 'soldier', 'guard', 'hero', 'wizard', 'witch', 'astronaut', 'diver', 'chef', 'person', 'kid'], { build: 'biped', features: [], pattern: 'none' }],
+  [['dragon', 'demon', 'devil', 'monster', 'beast', 'troll'], { build: 'biped', features: ['horns', 'wings'], eyes: 'angry', pattern: 'plated' }],
+  [['crystal', 'shard', 'crystalline'], { build: 'crystal', features: [], eyes: 'none', pattern: 'none' }],
+  [['king', 'queen', 'prince', 'princess', 'royal'], { build: 'biped', features: ['crown', 'cape'], pattern: 'none' }],
+];
+
+/** Read a creature out of the prompt; fall back to something sensible. */
+function creatureFrom(prompt, fallback, { angry = false } = {}) {
+  const text = prompt.toLowerCase();
+  for (const [words, spec] of CREATURES) {
+    if (words.some((w) => text.includes(w))) {
+      return { eyes: angry ? 'angry' : 'big', pattern: 'none', features: [], ...spec };
+    }
+  }
+  return { eyes: angry ? 'angry' : 'big', pattern: 'none', features: [], ...fallback };
+}
+
+// Collectible word → the icon that draws it.
+const ICONS = {
+  coin: ['coin', 'gold', 'money', 'cash', 'treasure'],
+  gem: ['gem', 'jewel', 'diamond', 'crystal', 'emerald', 'ruby'],
+  star: ['star', 'sparkle', 'light'],
+  heart: ['heart', 'love', 'life'],
+  key: ['key', 'lock', 'door'],
+  fruit: ['fruit', 'apple', 'berry', 'cherry', 'food', 'snack', 'tomato'],
+  bolt: ['bolt', 'power', 'energy', 'battery', 'charge', 'lightning', 'core'],
+  shell: ['shell', 'ocean', 'sea', 'beach'],
+  skull: ['skull', 'bone', 'death', 'haunted', 'spooky'],
+  orb: ['orb', 'ball', 'bubble', 'sphere'],
+};
+
+function iconFrom(prompt, fallback = 'coin') {
+  const text = prompt.toLowerCase();
+  for (const [icon, words] of Object.entries(ICONS)) {
+    if (words.some((w) => text.includes(w))) return icon;
+  }
+  return fallback;
 }
 
 // --- level generation -------------------------------------------------------
@@ -211,9 +293,6 @@ function genMazeGrid(rand, { cols = 25, rows = 13, openness = 0.12, pickups = 8,
 
 // --- config synthesis -------------------------------------------------------
 
-const SHAPES_HERO = ['round', 'circle', 'ship', 'triangle', 'hexagon'];
-const SHAPES_FOE = ['blob', 'ghost', 'hexagon', 'diamond', 'star'];
-
 function buildConfig(templateId, prompt, seedNum) {
   const rand = rng(seedNum || 1);
   const pal = pickPalette(prompt);
@@ -223,7 +302,17 @@ function buildConfig(templateId, prompt, seedNum) {
   const diff = wantsHard ? 1.25 : wantsEasy ? 0.78 : 1;
   const items = noun(prompt, templateId === 'platformer-classic' ? 'coins' : 'loot');
 
-  const cfg = { ...base, seed: seedNum % 999999 };
+  const cfg = { ...base, seed: seedNum % 999999, style: pickStyle(prompt) };
+
+  // Split the prompt at the word that separates protagonist from antagonist,
+  // and read each side independently. Scanning the whole string for both makes
+  // "defend the greenhouse from beetles" turn the player into a beetle.
+  const [heroText, foeText = ''] = prompt.split(
+    /\b(?:dodging|dodge|avoiding|avoid|chased by|hunted by|fighting|battling|attacked by|versus|vs\.?|against|from|while|escaping|fleeing)\b/i
+  );
+  const heroBuild = templateId === 'top-down-shooter' ? 'ship' : 'biped';
+  const heroSpec = creatureFrom(heroText, { build: heroBuild, eyes: heroBuild === 'ship' ? 'none' : 'big' });
+  const foeSpec = creatureFrom(foeText || prompt, { build: 'blob' }, { angry: true });
 
   switch (templateId) {
     case 'platformer-classic':
@@ -233,9 +322,9 @@ function buildConfig(templateId, prompt, seedNum) {
         hazard: '#ff4d6d', backdrop: pal.backdrop, pickupName: items,
       };
       cfg.entities = {
-        player: { shape: SHAPES_HERO[Math.floor(rand() * SHAPES_HERO.length)], size: 13, eyes: true },
-        enemy: { shape: SHAPES_FOE[Math.floor(rand() * SHAPES_FOE.length)], size: 14, speed: Math.round(38 * diff), behavior: /chase|hunt|follow/i.test(prompt) ? 'chase' : 'patrol', eyes: true },
-        pickup: { shape: 'diamond', size: 9 },
+        player: { size: 13, sprite: heroSpec },
+        enemy: { size: 14, speed: Math.round(38 * diff), behavior: /chase|hunt|follow/i.test(prompt) ? 'chase' : 'patrol', sprite: foeSpec },
+        pickup: { size: 9, icon: iconFrom(prompt, 'coin') },
       };
       cfg.level = { tileSize: 18, grid: genPlatformerGrid(rand, { density: diff }) };
       cfg.physics = {
@@ -261,9 +350,9 @@ function buildConfig(templateId, prompt, seedNum) {
         floorPattern: 'checker', pickupName: items,
       };
       cfg.entities = {
-        player: { shape: 'circle', size: 12, eyes: true },
-        enemy: { shape: SHAPES_FOE[Math.floor(rand() * SHAPES_FOE.length)], size: 13, speed: Math.round(42 * diff), behavior: /chase|hunt|guard|patrol/i.test(prompt) ? 'chase' : 'patrol', eyes: true },
-        pickup: { shape: 'star', size: 9 },
+        player: { size: 12, sprite: heroSpec },
+        enemy: { size: 13, speed: Math.round(42 * diff), behavior: /chase|hunt|guard|patrol/i.test(prompt) ? 'chase' : 'patrol', sprite: foeSpec },
+        pickup: { size: 9, icon: iconFrom(prompt, 'star') },
       };
       cfg.level = { tileSize: 20, grid: genMazeGrid(rand, { pickups: 8, enemies: wantsHard ? 5 : 3 }) };
       cfg.movement = { speed: Math.round(94 * (wantsHard ? 1.05 : 1)), accel: 20, diagonal: true };
@@ -278,8 +367,8 @@ function buildConfig(templateId, prompt, seedNum) {
     case 'top-down-shooter':
       cfg.theme = { floor: pal.sky[1], wall: pal.solid, accent: pal.accent, player: pal.hero, enemy: pal.foe, floorPattern: 'grid' };
       cfg.entities = {
-        player: { shape: 'ship', size: 15, eyes: false },
-        enemy: { shape: SHAPES_FOE[Math.floor(rand() * SHAPES_FOE.length)], size: 14, speed: Math.round(44 * diff), hp: 2, behavior: /shoot back|ranged|gun/i.test(prompt) ? 'shooter' : 'rush', fireEvery: 1.8, eyes: true },
+        player: { size: 15, sprite: heroSpec },
+        enemy: { size: 14, speed: Math.round(44 * diff), hp: 2, behavior: /shoot back|ranged|gun/i.test(prompt) ? 'shooter' : 'rush', fireEvery: 1.8, sprite: foeSpec },
       };
       cfg.arena = { coverCount: 5 };
       cfg.movement = { speed: 110, accel: 22 };
@@ -302,6 +391,7 @@ function buildConfig(templateId, prompt, seedNum) {
       cfg.bricks = { rows: wantsHard ? 7 : 5, cols: 10, hp: 2, pattern: ['solid', 'checker', 'pyramid', 'gaps', 'arch'][Math.floor(rand() * 5)] };
       cfg.rules = { lives: wantsHard ? 2 : 3, brickScore: 15, powerupChance: 0.16 };
       cfg.mechanicHooks = ['multiball', 'widen'];
+      cfg.powerupIcon = iconFrom(prompt, 'star');
       break;
   }
   return cfg;

@@ -16,7 +16,8 @@ const el = {
   restart: $('restart'), publish: $('publish'), notes: $('notes'), controlsHint: $('controlsHint'),
   published: $('published'), pageEditor: $('pageEditor'), republish: $('republish'),
   pgTitle: $('pgTitle'), pgTagline: $('pgTagline'), pgAccent: $('pgAccent'),
-  pgBg: $('pgBg'), pgFont: $('pgFont'), pgLayout: $('pgLayout'),
+  pgBg: $('pgBg'), pgStyle: $('pgStyle'), pgLayout: $('pgLayout'),
+  styleSelect: $('styleSelect'),
   domain: $('domain'), dnsShow: $('dnsShow'), dnsVerify: $('dnsVerify'), dnsOut: $('dnsOut'),
 };
 
@@ -136,6 +137,8 @@ function showGame(game) {
   el.controlsHint.textContent = CONTROLS[game.template_id] ?? '';
   el.instruction.disabled = false;
   el.applyEdit.disabled = false;
+  el.styleSelect.disabled = false;
+  el.styleSelect.value = game.config.style ?? 'pixel';
   el.restart.disabled = false;
   el.publish.disabled = false;
   el.reroll.disabled = !state.lastPrompt;
@@ -300,7 +303,7 @@ function fillPageEditor(page) {
   el.pgTagline.value = page.hero.tagline;
   el.pgAccent.value = page.theme.accent;
   el.pgBg.value = page.theme.background;
-  el.pgFont.value = page.theme.font;
+  el.pgStyle.value = page.style;
   el.pgLayout.value = page.layout;
 }
 
@@ -310,7 +313,7 @@ function collectPage() {
   page.hero.tagline = el.pgTagline.value;
   page.theme.accent = el.pgAccent.value;
   page.theme.background = el.pgBg.value;
-  page.theme.font = el.pgFont.value;
+  page.style = el.pgStyle.value;
   page.layout = el.pgLayout.value;
   return page;
 }
@@ -365,6 +368,19 @@ el.republish.onclick = () => { state.page = collectPage(); publish(); };
 el.restart.onclick = () => {
   el.preview.contentWindow?.postMessage({ type: 'rumpus:restart' }, '*');
   el.preview.focus();
+};
+// Style is one token shared by the game and its page, so switching it here
+// restyles both. No model call needed — it's a config key, not a rewrite.
+el.styleSelect.onchange = () => {
+  if (!state.game) return;
+  state.game.config.style = el.styleSelect.value;
+  if (state.page) state.page.style = el.styleSelect.value;
+  pushConfig();
+  log('rumpus', `Restyled everything as ${el.styleSelect.options[el.styleSelect.selectedIndex].text.toLowerCase()}.`, 'ok');
+};
+el.pgStyle.onchange = () => {
+  el.styleSelect.value = el.pgStyle.value;
+  el.styleSelect.onchange();
 };
 el.dnsShow.onclick = dnsShow;
 el.dnsVerify.onclick = dnsVerify;

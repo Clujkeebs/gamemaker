@@ -3,9 +3,19 @@
   "version": "1.0.0",
   "label": "Top-down collector",
   "blurb": "Roam a maze from above, grab everything, don't get caught.",
-  "primaryVerbs": ["collect", "explore", "dodge", "sneak"],
-  "goodFor": "Overhead games about gathering, exploring, or evading. No gravity, so levels are hard to make impossible — the second safe default.",
-  "reachability": { "kind": "flood", "need": ["G"] },
+  "primaryVerbs": [
+    "collect",
+    "explore",
+    "dodge",
+    "sneak"
+  ],
+  "goodFor": "Overhead games about gathering, exploring, or evading. No gravity, so levels are hard to make impossible \u2014 the second safe default.",
+  "reachability": {
+    "kind": "flood",
+    "need": [
+      "G"
+    ]
+  },
   "mechanicHooks": {
     "dash": "Shift for a short burst of speed.",
     "sprint": "Hold shift to move faster continuously.",
@@ -15,8 +25,8 @@
   "tiles": {
     ".": "open floor",
     "#": "wall",
-    "P": "player spawn — exactly one, required",
-    "G": "exit — required when win is reachGoal",
+    "P": "player spawn \u2014 exactly one, required",
+    "G": "exit \u2014 required when win is reachGoal",
     "x": "hazard tile, costs a life",
     "o": "collectible",
     "e": "enemy spawn"
@@ -24,24 +34,87 @@
   "config": {
     "type": "object",
     "fields": {
-      "seed": { "type": "int", "min": 0, "max": 999999, "default": 3 },
+      "seed": {
+        "type": "int",
+        "min": 0,
+        "max": 999999,
+        "default": 3
+      },
+      "style": {
+        "type": "enum",
+        "values": [
+          "pixel",
+          "neon",
+          "storybook",
+          "clay"
+        ],
+        "default": "pixel",
+        "doc": "Art direction for the WHOLE game and its landing page: sprite outlines and shading, terrain tiles, hazards, particles, HUD chrome, and the published page's fonts and borders. Pick one that fits the subject and everything follows from it."
+      },
       "mechanicHooks": {
-        "type": "array", "maxItems": 4, "default": [],
-        "of": { "type": "enum", "values": ["dash", "sprint", "lantern", "magnet"], "default": "dash" }
+        "type": "array",
+        "maxItems": 4,
+        "default": [],
+        "of": {
+          "type": "enum",
+          "values": [
+            "dash",
+            "sprint",
+            "lantern",
+            "magnet"
+          ],
+          "default": "dash"
+        }
       },
       "theme": {
         "type": "object",
         "fields": {
-          "floor":        { "type": "color", "default": "#171b27" },
-          "wall":         { "type": "color", "default": "#3b4560" },
-          "accent":       { "type": "color", "default": "#8be9fd" },
-          "player":       { "type": "color", "default": "#7ee787" },
-          "enemy":        { "type": "color", "default": "#ff6b6b" },
-          "pickup":       { "type": "color", "default": "#ffd166" },
-          "goal":         { "type": "color", "default": "#a78bfa" },
-          "hazard":       { "type": "color", "default": "#ff4d6d" },
-          "floorPattern": { "type": "enum", "values": ["none", "checker", "grid"], "default": "checker" },
-          "pickupName":   { "type": "string", "maxLength": 12, "default": "loot" }
+          "floor": {
+            "type": "color",
+            "default": "#171b27"
+          },
+          "wall": {
+            "type": "color",
+            "default": "#3b4560"
+          },
+          "accent": {
+            "type": "color",
+            "default": "#8be9fd"
+          },
+          "player": {
+            "type": "color",
+            "default": "#7ee787"
+          },
+          "enemy": {
+            "type": "color",
+            "default": "#ff6b6b"
+          },
+          "pickup": {
+            "type": "color",
+            "default": "#ffd166"
+          },
+          "goal": {
+            "type": "color",
+            "default": "#a78bfa"
+          },
+          "hazard": {
+            "type": "color",
+            "default": "#ff4d6d"
+          },
+          "floorPattern": {
+            "type": "enum",
+            "values": [
+              "none",
+              "checker",
+              "grid"
+            ],
+            "default": "checker"
+          },
+          "pickupName": {
+            "type": "string",
+            "maxLength": 12,
+            "default": "loot"
+          }
         }
       },
       "entities": {
@@ -50,26 +123,209 @@
           "player": {
             "type": "object",
             "fields": {
-              "shape": { "type": "enum", "values": ["rect", "round", "circle", "triangle", "diamond", "star", "hexagon", "cross", "blob", "ship", "ghost"], "default": "circle" },
-              "size":  { "type": "int", "min": 6, "max": 24, "default": 12, "doc": "Must be under tileSize or the player can't fit through 1-tile gaps." },
-              "eyes":  { "type": "bool", "default": true }
+              "size": {
+                "type": "int",
+                "min": 6,
+                "max": 24,
+                "default": 12,
+                "doc": "Must be under tileSize or the player can't fit through 1-tile gaps."
+              },
+              "sprite": {
+                "type": "object",
+                "doc": "What the player looks like.",
+                "fields": {
+                  "build": {
+                    "type": "enum",
+                    "values": [
+                      "biped",
+                      "blob",
+                      "orb",
+                      "ship",
+                      "ghost",
+                      "bug",
+                      "crystal",
+                      "quadruped",
+                      "bird",
+                      "fish",
+                      "car"
+                    ],
+                    "default": "orb",
+                    "doc": "Body plan. quadruped/bird/fish/car are side-facing and flip to face travel; the rest face the player."
+                  },
+                  "features": {
+                    "type": "array",
+                    "maxItems": 3,
+                    "of": {
+                      "type": "enum",
+                      "values": [
+                        "earsPointed",
+                        "earsRound",
+                        "horns",
+                        "antenna",
+                        "crown",
+                        "visor",
+                        "scarf",
+                        "wings",
+                        "cape",
+                        "tail"
+                      ],
+                      "default": "earsPointed"
+                    },
+                    "default": [],
+                    "doc": "Parts layered on the body. Ears+tail make a quadruped read as a specific animal; visor+antenna make a biped read as a robot."
+                  },
+                  "eyes": {
+                    "type": "enum",
+                    "values": [
+                      "dot",
+                      "big",
+                      "angry",
+                      "visor",
+                      "none"
+                    ],
+                    "default": "big",
+                    "doc": "angry adds a brow, visor/none hide the eyes (use with the visor feature)."
+                  },
+                  "pattern": {
+                    "type": "enum",
+                    "values": [
+                      "none",
+                      "stripes",
+                      "spots",
+                      "belly",
+                      "plated"
+                    ],
+                    "default": "none",
+                    "doc": "Markings painted over plain body pixels only, so they never cover the face."
+                  }
+                }
+              }
             }
           },
           "enemy": {
             "type": "object",
             "fields": {
-              "shape":    { "type": "enum", "values": ["rect", "round", "circle", "triangle", "diamond", "star", "hexagon", "cross", "blob", "ship", "ghost"], "default": "ghost" },
-              "size":     { "type": "int", "min": 6, "max": 24, "default": 13 },
-              "speed":    { "type": "number", "min": 8, "max": 120, "default": 44, "doc": "px/s. A chaser faster than movement.speed is unwinnable — keep it below." },
-              "behavior": { "type": "enum", "values": ["patrol", "chase", "wander", "guard"], "default": "patrol" },
-              "eyes":     { "type": "bool", "default": true }
+              "size": {
+                "type": "int",
+                "min": 6,
+                "max": 24,
+                "default": 13
+              },
+              "speed": {
+                "type": "number",
+                "min": 8,
+                "max": 120,
+                "default": 44,
+                "doc": "px/s. A chaser faster than movement.speed is unwinnable \u2014 keep it below."
+              },
+              "behavior": {
+                "type": "enum",
+                "values": [
+                  "patrol",
+                  "chase",
+                  "wander",
+                  "guard"
+                ],
+                "default": "patrol"
+              },
+              "sprite": {
+                "type": "object",
+                "doc": "What the enemies look like.",
+                "fields": {
+                  "build": {
+                    "type": "enum",
+                    "values": [
+                      "biped",
+                      "blob",
+                      "orb",
+                      "ship",
+                      "ghost",
+                      "bug",
+                      "crystal",
+                      "quadruped",
+                      "bird",
+                      "fish",
+                      "car"
+                    ],
+                    "default": "ghost",
+                    "doc": "Body plan. quadruped/bird/fish/car are side-facing and flip to face travel; the rest face the player."
+                  },
+                  "features": {
+                    "type": "array",
+                    "maxItems": 3,
+                    "of": {
+                      "type": "enum",
+                      "values": [
+                        "earsPointed",
+                        "earsRound",
+                        "horns",
+                        "antenna",
+                        "crown",
+                        "visor",
+                        "scarf",
+                        "wings",
+                        "cape",
+                        "tail"
+                      ],
+                      "default": "earsPointed"
+                    },
+                    "default": [],
+                    "doc": "Parts layered on the body. Ears+tail make a quadruped read as a specific animal; visor+antenna make a biped read as a robot."
+                  },
+                  "eyes": {
+                    "type": "enum",
+                    "values": [
+                      "dot",
+                      "big",
+                      "angry",
+                      "visor",
+                      "none"
+                    ],
+                    "default": "angry",
+                    "doc": "angry adds a brow, visor/none hide the eyes (use with the visor feature)."
+                  },
+                  "pattern": {
+                    "type": "enum",
+                    "values": [
+                      "none",
+                      "stripes",
+                      "spots",
+                      "belly",
+                      "plated"
+                    ],
+                    "default": "none",
+                    "doc": "Markings painted over plain body pixels only, so they never cover the face."
+                  }
+                }
+              }
             }
           },
           "pickup": {
             "type": "object",
             "fields": {
-              "shape": { "type": "enum", "values": ["rect", "round", "circle", "triangle", "diamond", "star", "hexagon", "cross", "blob", "ship", "ghost"], "default": "star" },
-              "size":  { "type": "int", "min": 4, "max": 16, "default": 9 }
+              "size": {
+                "type": "int",
+                "min": 4,
+                "max": 16,
+                "default": 9
+              },
+              "icon": {
+                "type": "enum",
+                "values": [
+                  "coin",
+                  "gem",
+                  "star",
+                  "heart",
+                  "key",
+                  "orb",
+                  "fruit",
+                  "bolt",
+                  "shell",
+                  "skull"
+                ],
+                "default": "star",
+                "doc": "Which collectible icon to draw. Pick one that matches theme.pickupName."
+              }
             }
           }
         }
@@ -77,10 +333,26 @@
       "level": {
         "type": "object",
         "fields": {
-          "tileSize": { "type": "int", "min": 12, "max": 34, "default": 20 },
+          "tileSize": {
+            "type": "int",
+            "min": 12,
+            "max": 34,
+            "default": 20
+          },
           "grid": {
-            "type": "grid", "minRows": 5, "maxRows": 28, "maxCols": 60,
-            "tiles": [".", "#", "P", "G", "x", "o", "e"],
+            "type": "grid",
+            "minRows": 5,
+            "maxRows": 28,
+            "maxCols": 60,
+            "tiles": [
+              ".",
+              "#",
+              "P",
+              "G",
+              "x",
+              "o",
+              "e"
+            ],
             "doc": "Rows of equal length. Enclose the level in walls. Needs one P, and a G when win is reachGoal.",
             "default": [
               "########################",
@@ -99,20 +371,67 @@
       "movement": {
         "type": "object",
         "fields": {
-          "speed":    { "type": "number", "min": 30, "max": 200, "default": 92, "doc": "px/s. Must exceed enemy speed when behavior is chase." },
-          "accel":    { "type": "number", "min": 4, "max": 40, "default": 18, "doc": "Higher is snappier." },
-          "diagonal": { "type": "bool", "default": true, "doc": "false gives strict 4-direction movement." }
+          "speed": {
+            "type": "number",
+            "min": 30,
+            "max": 200,
+            "default": 92,
+            "doc": "px/s. Must exceed enemy speed when behavior is chase."
+          },
+          "accel": {
+            "type": "number",
+            "min": 4,
+            "max": 40,
+            "default": 18,
+            "doc": "Higher is snappier."
+          },
+          "diagonal": {
+            "type": "bool",
+            "default": true,
+            "doc": "false gives strict 4-direction movement."
+          }
         }
       },
       "rules": {
         "type": "object",
         "fields": {
-          "win":            { "type": "enum", "values": ["collectAll", "reachGoal", "survive"], "default": "collectAll" },
-          "goalNeedsAll":   { "type": "bool", "default": false },
-          "surviveSeconds": { "type": "number", "min": 10, "max": 180, "default": 40 },
-          "lives":          { "type": "int", "min": 1, "max": 9, "default": 3 },
-          "timeLimit":      { "type": "number", "min": 0, "max": 600, "default": 0 },
-          "pickupScore":    { "type": "int", "min": 1, "max": 500, "default": 10 }
+          "win": {
+            "type": "enum",
+            "values": [
+              "collectAll",
+              "reachGoal",
+              "survive"
+            ],
+            "default": "collectAll"
+          },
+          "goalNeedsAll": {
+            "type": "bool",
+            "default": false
+          },
+          "surviveSeconds": {
+            "type": "number",
+            "min": 10,
+            "max": 180,
+            "default": 40
+          },
+          "lives": {
+            "type": "int",
+            "min": 1,
+            "max": 9,
+            "default": 3
+          },
+          "timeLimit": {
+            "type": "number",
+            "min": 0,
+            "max": 600,
+            "default": 0
+          },
+          "pickupScore": {
+            "type": "int",
+            "min": 1,
+            "max": 500,
+            "default": 10
+          }
         }
       }
     }

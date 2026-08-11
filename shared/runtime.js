@@ -6,6 +6,7 @@
 // update/draw, which is what keeps each one small enough to actually be tested.
 
 import { rng, hashString, mix } from './draw.js';
+import { getStyle } from './styles.js';
 
 const KEYMAP = {
   ArrowLeft: 'left', KeyA: 'left',
@@ -67,6 +68,7 @@ export function boot(makeGame, opts = {}) {
   let state = { phase: 'play', hud: {}, message: '' };
   let game = null;
   let config = null;
+  let style = getStyle('pixel');
   let last = 0;
   let accum = 0;
   let elapsed = 0;
@@ -99,6 +101,7 @@ export function boot(makeGame, opts = {}) {
 
   function load(next) {
     config = next;
+    style = getStyle(next?.style);
     try {
       restart();
     } catch (err) {
@@ -148,38 +151,51 @@ export function boot(makeGame, opts = {}) {
   function drawHud() {
     const entries = Object.entries(state.hud).filter(([, v]) => v !== undefined && v !== null);
     if (!entries.length) return;
-    ctx.font = '600 11px ui-monospace, Menlo, Consolas, monospace';
+    const h = style.hud;
+    ctx.font = h.font;
     ctx.textBaseline = 'top';
+    if (h.track) ctx.letterSpacing = `${h.track}px`;
+    const boxH = 20;
     let x = 8;
     for (const [k, v] of entries) {
       const text = `${k} ${v}`;
-      const w = ctx.measureText(text).width + 12;
-      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      const w = ctx.measureText(text).width + h.padX * 2;
+      ctx.fillStyle = h.bg;
       ctx.beginPath();
-      ctx.roundRect(x, 7, w, 18, 5);
+      ctx.roundRect(x, 7, w, boxH, Math.min(h.radius, boxH / 2));
       ctx.fill();
-      ctx.fillStyle = '#ffffff';
-      ctx.fillText(text, x + 6, 12);
-      x += w + 6;
+      ctx.fillStyle = h.fg;
+      ctx.fillText(text, x + h.padX, 7 + h.padY);
+      x += w + h.gap;
     }
+    if (h.track) ctx.letterSpacing = '0px';
   }
 
   function drawOverlay() {
-    ctx.fillStyle = 'rgba(8,9,14,0.78)';
+    const o = style.overlay;
+    ctx.fillStyle = `rgba(8,9,14,${o.scrim})`;
     ctx.fillRect(0, 0, W, H);
     const tint = state.phase === 'won' ? '#7ee787' : state.phase === 'error' ? '#ff7b72' : '#ffa657';
     ctx.textAlign = 'center';
+    ctx.save();
+    if (o.glow) {
+      ctx.shadowColor = tint;
+      ctx.shadowBlur = 18;
+    }
     ctx.fillStyle = tint;
-    ctx.font = '700 24px ui-rounded, "Segoe UI", system-ui, sans-serif';
+    ctx.font = o.title;
+    if (o.letterSpacing) ctx.letterSpacing = `${o.letterSpacing}px`;
     ctx.fillText(
       state.phase === 'won' ? 'WIN' : state.phase === 'error' ? 'BROKEN' : 'GAME OVER',
       W / 2, H / 2 - 26
     );
+    ctx.restore();
+    ctx.letterSpacing = '0px';
     ctx.fillStyle = '#e8eaf2';
-    ctx.font = '500 13px system-ui, sans-serif';
+    ctx.font = o.body;
     wrap(ctx, state.message, W / 2, H / 2 + 6, W - 60, 17);
     ctx.fillStyle = 'rgba(232,234,242,0.55)';
-    ctx.font = '500 11px system-ui, sans-serif';
+    ctx.font = o.body;
     ctx.fillText('press space or click to play again', W / 2, H - 26);
     ctx.textAlign = 'left';
   }

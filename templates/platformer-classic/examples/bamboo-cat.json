@@ -1,0 +1,45 @@
+{
+  "_note": "Regression example: 'a cat ninja sneaking through a bamboo forest, dodging guard dogs'.",
+  "seed": 41,
+  "mechanicHooks": ["doubleJump", "stomp"],
+  "theme": {
+    "skyTop": "#1d4f3f",
+    "skyBottom": "#0a1a16",
+    "ground": "#3f6b52",
+    "accent": "#ffe6a7",
+    "player": "#f4f1de",
+    "enemy": "#c96a4a",
+    "pickup": "#ffd166",
+    "goal": "#8fe3a0",
+    "hazard": "#e5533d",
+    "backdrop": "forest",
+    "pickupName": "scrolls"
+  },
+  "entities": {
+    "player": { "shape": "round", "size": 13, "eyes": true },
+    "enemy": { "shape": "blob", "size": 14, "speed": 38, "behavior": "patrol", "eyes": true },
+    "pickup": { "shape": "diamond", "size": 9 }
+  },
+  "level": {
+    "tileSize": 18,
+    "grid": [
+      "..............................",
+      "..............................",
+      "..........ooo.................",
+      ".........#####................",
+      "....o..............###...oo...",
+      "...###......e.........#######.",
+      "P.......x.......--...........G",
+      "##############################"
+    ]
+  },
+  "physics": { "gravity": 760, "moveSpeed": 104, "jumpPower": 268, "friction": 16 },
+  "rules": {
+    "win": "reachGoal",
+    "goalNeedsAll": false,
+    "surviveSeconds": 45,
+    "lives": 3,
+    "timeLimit": 0,
+    "pickupScore": 25
+  }
+}

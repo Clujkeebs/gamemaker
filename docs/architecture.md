@@ -64,11 +64,19 @@ build step, no runtime dependency.
 The bundle:
 
 ```
-index.html          arcade page (landing wrapper), config inlined
-game.html           the game itself: pinned engine + config, inlined
-engine-<ver>.js     the pinned template engine  [or inlined into game.html]
-assets/             anything procedural generation couldn't cover
+index.html                      arcade page (landing wrapper), config inlined
+game.html                       the game: pinned engine + inlined config
+templates/<id>/engine.js        copy of the engine, taken at publish time
+shared/*.js                     only the modules that engine actually imports
+_headers                        immutable for engine code, no-cache for HTML
+rumpus.json                     what was published, and from which template version
 ```
+
+The layout mirrors the repo so the engine's own relative imports keep working
+with no bundler and no transpile step. The `shared/` copy is the engine's real
+import graph, walked at publish time — a published game has no business
+shipping the validator or the level checker, which run here, before anything is
+written.
 
 The game runs in an iframe inside `index.html`, from `game.html`. That's the
 same decoupling as above, made physical: the arcade page can be redeployed with
@@ -148,7 +156,23 @@ type.
 A user fiddling with their page's font can't produce a game that won't load, and
 that property is worth more than any convenience gained by merging them.
 
-## 7. Failure modes worth designing for now
+## 7. Running without credentials
+
+Neither an API key nor a hosting token is required to run the whole loop.
+
+- **No `ANTHROPIC_API_KEY`** — an offline generator takes over: keyword
+  classification against the same template catalog, a palette chosen from the
+  words in the prompt, and procedurally generated levels (randomized-DFS mazes,
+  which are connected by construction). It is meaningfully dumber than the
+  model and the UI says so plainly rather than quietly degrading. Conversational
+  editing is off, since there is nothing to converse with.
+- **No `NETLIFY_AUTH_TOKEN`** — the bundle is still built and served from the
+  app at `/p/<slug>/`, so publishing is demoable end to end with no account.
+
+This is a deliberate cost: a demo that dies on a missing environment variable is
+a demo that dies.
+
+## 8. Failure modes worth designing for now
 
 These are the ones that will actually bite, listed so they're a decision rather
 than a surprise.

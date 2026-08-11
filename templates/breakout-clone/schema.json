@@ -1,0 +1,70 @@
+{
+  "template_id": "breakout-clone",
+  "version": "1.0.0",
+  "label": "Breakout",
+  "blurb": "Bounce a ball off a paddle to demolish a wall of bricks.",
+  "primaryVerbs": ["bounce", "break", "aim"],
+  "goodFor": "Anything about knocking down, smashing, or clearing a wall. The brick wall is generated from a pattern, so it can never be unwinnable.",
+  "reachability": null,
+  "mechanicHooks": {
+    "multiball": "A powerup that splits the ball into three.",
+    "sticky": "A powerup that makes the ball stick to the paddle for re-aiming.",
+    "lasers": "A powerup that lets the paddle shoot bricks.",
+    "widen": "A powerup that makes the paddle wider for a while."
+  },
+  "config": {
+    "type": "object",
+    "fields": {
+      "seed": { "type": "int", "min": 0, "max": 999999, "default": 11 },
+      "mechanicHooks": {
+        "type": "array", "maxItems": 4, "default": [],
+        "of": { "type": "enum", "values": ["multiball", "sticky", "lasers", "widen"], "default": "multiball" },
+        "doc": "Hooks here become the pool of powerups that drop from broken bricks."
+      },
+      "theme": {
+        "type": "object",
+        "fields": {
+          "background":  { "type": "color", "default": "#0e1117" },
+          "paddle":      { "type": "color", "default": "#7ee787" },
+          "ball":        { "type": "color", "default": "#ffffff" },
+          "brickTop":    { "type": "color", "default": "#ff6b6b", "doc": "Color of the top brick row; rows fade toward brickBottom." },
+          "brickBottom": { "type": "color", "default": "#ffd166" },
+          "accent":      { "type": "color", "default": "#8be9fd", "doc": "Powerups, lasers, sticky paddle." }
+        }
+      },
+      "paddle": {
+        "type": "object",
+        "fields": {
+          "width": { "type": "int", "min": 26, "max": 130, "default": 62, "doc": "Pixels. Under ~34 is punishing." },
+          "speed": { "type": "number", "min": 120, "max": 620, "default": 320, "doc": "px/s for keyboard control." }
+        }
+      },
+      "ball": {
+        "type": "object",
+        "fields": {
+          "size":     { "type": "int", "min": 4, "max": 16, "default": 7 },
+          "speed":    { "type": "number", "min": 90, "max": 340, "default": 168, "doc": "Starting px/s. Above ~260 it outruns the paddle." },
+          "maxSpeed": { "type": "number", "min": 120, "max": 460, "default": 260 },
+          "accel":    { "type": "number", "min": 0, "max": 12, "default": 1.6, "doc": "Speed gained per brick broken." }
+        }
+      },
+      "bricks": {
+        "type": "object",
+        "fields": {
+          "rows":    { "type": "int", "min": 1, "max": 10, "default": 5 },
+          "cols":    { "type": "int", "min": 3, "max": 16, "default": 10 },
+          "hp":      { "type": "int", "min": 1, "max": 5, "default": 2, "doc": "HP of the top row; lower rows scale down to 1." },
+          "pattern": { "type": "enum", "values": ["solid", "checker", "pyramid", "gaps", "arch"], "default": "solid" }
+        }
+      },
+      "rules": {
+        "type": "object",
+        "fields": {
+          "lives":          { "type": "int", "min": 1, "max": 9, "default": 3 },
+          "brickScore":     { "type": "int", "min": 1, "max": 200, "default": 10 },
+          "powerupChance":  { "type": "number", "min": 0, "max": 0.6, "default": 0.14, "doc": "Chance a destroyed brick drops a powerup. Needs at least one hook." }
+        }
+      }
+    }
+  }
+}

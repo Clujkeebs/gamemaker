@@ -1,0 +1,17 @@
+{
+  "_note": "Regression example: 'break a wall of candy bricks with a bouncing gumball'. Exercises powerup drops and a pyramid wall.",
+  "seed": 42,
+  "mechanicHooks": ["multiball", "widen"],
+  "theme": {
+    "background": "#1a0f22",
+    "paddle": "#ff9ecd",
+    "ball": "#fff5f8",
+    "brickTop": "#ff5d8f",
+    "brickBottom": "#ffd166",
+    "accent": "#8be9fd"
+  },
+  "paddle": { "width": 66, "speed": 330 },
+  "ball": { "size": 7, "speed": 170, "maxSpeed": 262, "accel": 1.8 },
+  "bricks": { "rows": 5, "cols": 11, "hp": 2, "pattern": "pyramid" },
+  "rules": { "lives": 3, "brickScore": 15, "powerupChance": 0.18 }
+}

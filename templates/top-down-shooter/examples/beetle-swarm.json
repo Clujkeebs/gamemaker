@@ -1,0 +1,22 @@
+{
+  "_note": "Regression example: 'defend the greenhouse from waves of giant beetles'. Mouse aim, clearWaves.",
+  "seed": 314,
+  "mechanicHooks": ["spread", "dashRoll"],
+  "theme": {
+    "floor": "#101a14",
+    "wall": "#2f5d43",
+    "accent": "#ffe066",
+    "player": "#a7f3d0",
+    "enemy": "#b05c3b",
+    "floorPattern": "grid"
+  },
+  "entities": {
+    "player": { "shape": "ship", "size": 15, "eyes": false },
+    "enemy": { "shape": "hexagon", "size": 14, "speed": 44, "hp": 2, "behavior": "rush", "fireEvery": 1.8, "eyes": true }
+  },
+  "arena": { "coverCount": 6 },
+  "movement": { "speed": 112, "accel": 22 },
+  "combat": { "aim": "mouse", "fireRate": 5.5, "bulletSpeed": 340, "damage": 1 },
+  "waves": { "count": 6, "baseEnemies": 4, "ramp": 1.5, "hpRamp": 0.34, "restBetween": 2 },
+  "rules": { "win": "clearWaves", "surviveSeconds": 60, "health": 3, "killScore": 15 }
+}

@@ -1,0 +1,103 @@
+{
+  "template_id": "top-down-shooter",
+  "version": "1.0.0",
+  "label": "Top-down shooter",
+  "blurb": "Hold an arena against waves of things that want you dead.",
+  "primaryVerbs": ["shoot", "survive", "dodge"],
+  "goodFor": "Anything where the main verb is shooting. Aim with the mouse, or with the movement direction on keyboard.",
+  "reachability": null,
+  "mechanicHooks": {
+    "spread": "Fire three bullets in a fan instead of one.",
+    "pierce": "Bullets pass through up to three enemies.",
+    "dashRoll": "Shift for a fast, briefly invulnerable roll.",
+    "shield": "Shift raises a shield that blocks damage (no roll).",
+    "homing": "Bullets curve toward the nearest enemy."
+  },
+  "config": {
+    "type": "object",
+    "fields": {
+      "seed": { "type": "int", "min": 0, "max": 999999, "default": 5, "doc": "Fixes cover placement." },
+      "mechanicHooks": {
+        "type": "array", "maxItems": 5, "default": [],
+        "of": { "type": "enum", "values": ["spread", "pierce", "dashRoll", "shield", "homing"], "default": "spread" }
+      },
+      "theme": {
+        "type": "object",
+        "fields": {
+          "floor":        { "type": "color", "default": "#12141d" },
+          "wall":         { "type": "color", "default": "#39415c" },
+          "accent":       { "type": "color", "default": "#ffd166" },
+          "player":       { "type": "color", "default": "#7ee787" },
+          "enemy":        { "type": "color", "default": "#ff6b6b" },
+          "floorPattern": { "type": "enum", "values": ["none", "grid"], "default": "grid" }
+        }
+      },
+      "entities": {
+        "type": "object",
+        "fields": {
+          "player": {
+            "type": "object",
+            "fields": {
+              "shape": { "type": "enum", "values": ["rect", "round", "circle", "triangle", "diamond", "star", "hexagon", "cross", "blob", "ship", "ghost"], "default": "ship" },
+              "size":  { "type": "int", "min": 8, "max": 26, "default": 15 },
+              "eyes":  { "type": "bool", "default": false }
+            }
+          },
+          "enemy": {
+            "type": "object",
+            "fields": {
+              "shape":     { "type": "enum", "values": ["rect", "round", "circle", "triangle", "diamond", "star", "hexagon", "cross", "blob", "ship", "ghost"], "default": "hexagon" },
+              "size":      { "type": "int", "min": 8, "max": 30, "default": 14 },
+              "speed":     { "type": "number", "min": 10, "max": 130, "default": 46, "doc": "px/s. Keep well below movement.speed or the arena becomes a coin flip." },
+              "hp":        { "type": "int", "min": 1, "max": 12, "default": 2 },
+              "behavior":  { "type": "enum", "values": ["rush", "drift", "shooter"], "default": "rush" },
+              "fireEvery": { "type": "number", "min": 0.4, "max": 6, "default": 1.8, "doc": "Seconds between shots; only used when behavior is shooter." },
+              "eyes":      { "type": "bool", "default": true }
+            }
+          }
+        }
+      },
+      "arena": {
+        "type": "object",
+        "fields": {
+          "coverCount": { "type": "int", "min": 0, "max": 14, "default": 5, "doc": "Cover blocks. Above ~10 the arena gets cramped." }
+        }
+      },
+      "movement": {
+        "type": "object",
+        "fields": {
+          "speed": { "type": "number", "min": 40, "max": 220, "default": 108 },
+          "accel": { "type": "number", "min": 4, "max": 40, "default": 20 }
+        }
+      },
+      "combat": {
+        "type": "object",
+        "fields": {
+          "aim":         { "type": "enum", "values": ["mouse", "facing"], "default": "mouse" },
+          "fireRate":    { "type": "number", "min": 0.5, "max": 14, "default": 5, "doc": "Shots per second." },
+          "bulletSpeed": { "type": "number", "min": 90, "max": 620, "default": 320 },
+          "damage":      { "type": "int", "min": 1, "max": 10, "default": 1 }
+        }
+      },
+      "waves": {
+        "type": "object",
+        "fields": {
+          "count":        { "type": "int", "min": 1, "max": 30, "default": 6, "doc": "Only used when win is clearWaves." },
+          "baseEnemies":  { "type": "int", "min": 1, "max": 20, "default": 4 },
+          "ramp":         { "type": "number", "min": 0, "max": 6, "default": 1.5, "doc": "Extra enemies per wave." },
+          "hpRamp":       { "type": "number", "min": 0, "max": 3, "default": 0.34, "doc": "Extra enemy HP per wave." },
+          "restBetween":  { "type": "number", "min": 0.5, "max": 8, "default": 2 }
+        }
+      },
+      "rules": {
+        "type": "object",
+        "fields": {
+          "win":            { "type": "enum", "values": ["clearWaves", "survive"], "default": "clearWaves" },
+          "surviveSeconds": { "type": "number", "min": 15, "max": 300, "default": 60 },
+          "health":         { "type": "int", "min": 1, "max": 9, "default": 3 },
+          "killScore":      { "type": "int", "min": 1, "max": 500, "default": 10 }
+        }
+      }
+    }
+  }
+}

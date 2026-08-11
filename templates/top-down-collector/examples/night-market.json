@@ -1,0 +1,45 @@
+{
+  "_note": "Regression example: 'a raccoon robbing a night market, dodging the security guards'. Exercises lantern + collectAll.",
+  "seed": 88,
+  "mechanicHooks": ["sprint", "lantern"],
+  "theme": {
+    "floor": "#141019",
+    "wall": "#5b3f57",
+    "accent": "#ffb703",
+    "player": "#c8d3dd",
+    "enemy": "#ff6b6b",
+    "pickup": "#ffd166",
+    "goal": "#a78bfa",
+    "hazard": "#ff4d6d",
+    "floorPattern": "checker",
+    "pickupName": "snacks"
+  },
+  "entities": {
+    "player": { "shape": "round", "size": 12, "eyes": true },
+    "enemy": { "shape": "blob", "size": 13, "speed": 40, "behavior": "guard", "eyes": true },
+    "pickup": { "shape": "circle", "size": 9 }
+  },
+  "level": {
+    "tileSize": 20,
+    "grid": [
+      "########################",
+      "#P...o......#.....o....#",
+      "#.####.####.#.####.###.#",
+      "#....#....#...#..e...#.#",
+      "###..#.##.#####.####.#.#",
+      "#..o.#.#....o....#...#.#",
+      "#.####.#.#######.#.###.#",
+      "#......#.....e...#....o#",
+      "########################"
+    ]
+  },
+  "movement": { "speed": 96, "accel": 20, "diagonal": true },
+  "rules": {
+    "win": "collectAll",
+    "goalNeedsAll": false,
+    "surviveSeconds": 40,
+    "lives": 3,
+    "timeLimit": 0,
+    "pickupScore": 20
+  }
+}

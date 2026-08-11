@@ -1,0 +1,46 @@
+{
+  "_note": "Regression example: low gravity, collect-everything-then-exit. Exercises goalNeedsAll and a timer.",
+  "seed": 202,
+  "mechanicHooks": ["dash"],
+  "theme": {
+    "skyTop": "#241a3d",
+    "skyBottom": "#0a0713",
+    "ground": "#6b5d8a",
+    "accent": "#8be9fd",
+    "player": "#f8f8f2",
+    "enemy": "#ff79c6",
+    "pickup": "#8be9fd",
+    "goal": "#50fa7b",
+    "hazard": "#ff5555",
+    "backdrop": "stars",
+    "pickupName": "cores"
+  },
+  "entities": {
+    "player": { "shape": "ship", "size": 14, "eyes": false },
+    "enemy": { "shape": "ghost", "size": 15, "speed": 30, "behavior": "hop", "eyes": true },
+    "pickup": { "shape": "hexagon", "size": 10 }
+  },
+  "level": {
+    "tileSize": 18,
+    "grid": [
+      "...........................",
+      ".....o.......o.........o...",
+      "....###.....###.......###..",
+      "..........................G",
+      "..o....................####",
+      ".####....e.........o.......",
+      "...........###....###......",
+      "P..........................",
+      "###########################"
+    ]
+  },
+  "physics": { "gravity": 380, "moveSpeed": 88, "jumpPower": 300, "friction": 9 },
+  "rules": {
+    "win": "reachGoal",
+    "goalNeedsAll": true,
+    "surviveSeconds": 45,
+    "lives": 3,
+    "timeLimit": 120,
+    "pickupScore": 40
+  }
+}

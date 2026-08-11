@@ -1,0 +1,47 @@
+{
+  "_note": "Regression example: reach-the-exit with active chasers. Exercises goalNeedsAll, a timer, and chase AI kept slower than the player.",
+  "seed": 1207,
+  "mechanicHooks": ["dash"],
+  "theme": {
+    "floor": "#101725",
+    "wall": "#2f4858",
+    "accent": "#8be9fd",
+    "player": "#ffe066",
+    "enemy": "#c77dff",
+    "pickup": "#8be9fd",
+    "goal": "#7ee787",
+    "hazard": "#ff4d6d",
+    "floorPattern": "grid",
+    "pickupName": "books"
+  },
+  "entities": {
+    "player": { "shape": "circle", "size": 12, "eyes": true },
+    "enemy": { "shape": "ghost", "size": 14, "speed": 52, "behavior": "chase", "eyes": true },
+    "pickup": { "shape": "diamond", "size": 9 }
+  },
+  "level": {
+    "tileSize": 20,
+    "grid": [
+      "######################",
+      "#P......#......#....o#",
+      "#.#####.#.####.#.###.#",
+      "#.#...#...#..#.#.#e#.#",
+      "#.#.#.#####..#.#.#.#.#",
+      "#o..#........#...#...#",
+      "#.###.#####.####.###.#",
+      "#...#...e.#....#...#.#",
+      "#.#.###.#.#.##.#.#.#.#",
+      "#.#.....#...#..o.#..G#",
+      "######################"
+    ]
+  },
+  "movement": { "speed": 104, "accel": 22, "diagonal": true },
+  "rules": {
+    "win": "reachGoal",
+    "goalNeedsAll": true,
+    "surviveSeconds": 40,
+    "lives": 3,
+    "timeLimit": 150,
+    "pickupScore": 30
+  }
+}

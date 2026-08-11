@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rumpus — describe a game, play it, ship it</title>
+<meta name="description" content="Type a game idea. Get a playable 2D game. Share the link.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>%F0%9F%95%B9%EF%B8%8F</text></svg>">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="logo" aria-hidden="true">🕹</span>
+    <span class="wordmark">Rumpus</span>
+    <span class="tag">describe a game · play it · ship it</span>
+  </div>
+  <div class="status" id="status" role="status"></div>
+</header>
+
+<main class="app">
+
+  <!-- ─────────── left: make and edit ─────────── -->
+  <section class="panel make">
+    <div class="prompt-block">
+      <label class="label" for="prompt">What's the game?</label>
+      <textarea id="prompt" rows="3" spellcheck="false"
+        placeholder="a cat ninja who wall-jumps through a bamboo forest dodging guard dogs"></textarea>
+      <div class="row">
+        <button class="btn primary" id="make">Make a rumpus</button>
+        <button class="btn ghost" id="reroll" disabled title="Same idea, new roll">Re-roll</button>
+      </div>
+      <div class="chips" id="starters"></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="edit-block">
+      <label class="label" for="instruction">Change it</label>
+      <div class="row tight">
+        <input id="instruction" type="text" spellcheck="false" disabled
+          placeholder="make it harder · now it's underwater · give him a double jump">
+        <button class="btn" id="applyEdit" disabled>Go</button>
+      </div>
+      <div class="chips" id="editChips"></div>
+    </div>
+
+    <div class="log" id="log" aria-live="polite"></div>
+  </section>
+
+  <!-- ─────────── middle: the game ─────────── -->
+  <section class="panel stage-panel">
+    <div class="stage-head">
+      <div class="titles">
+        <h1 id="gameTitle">Nothing yet</h1>
+        <p id="gameDesc">Type an idea on the left. Anything. The worse the better.</p>
+      </div>
+      <span class="pill" id="templatePill" hidden></span>
+    </div>
+
+    <div class="stage-wrap">
+      <div class="stage" id="stageBox">
+        <iframe id="preview" title="game preview" sandbox="allow-scripts" hidden></iframe>
+        <div class="stage-empty" id="stageEmpty">
+          <div class="blink">▮</div>
+          <p>no game loaded</p>
+        </div>
+        <div class="stage-busy" id="stageBusy" hidden><div class="spinner"></div><p id="busyText">building…</p></div>
+      </div>
+    </div>
+
+    <div class="stage-foot">
+      <button class="btn small" id="restart" disabled>Restart</button>
+      <span class="hint" id="controlsHint"></span>
+      <button class="btn small accent" id="publish" disabled>Let it loose ↗</button>
+    </div>
+
+    <div class="notes" id="notes" hidden></div>
+  </section>
+
+  <!-- ─────────── right: ship it ─────────── -->
+  <section class="panel ship" id="shipPanel">
+    <h2 class="section-title">Published</h2>
+    <div class="published empty" id="published">
+      <p class="muted">Nothing shipped yet. Publishing gives you a link that works on anyone's phone.</p>
+    </div>
+
+    <div id="pageEditor" hidden>
+      <h2 class="section-title">Its page</h2>
+      <p class="muted tiny">This is the landing page around the game. Editing it can't touch the game.</p>
+      <div class="field">
+        <label for="pgTitle">Title</label>
+        <input id="pgTitle" type="text" maxlength="60">
+      </div>
+      <div class="field">
+        <label for="pgTagline">Tagline</label>
+        <input id="pgTagline" type="text" maxlength="140">
+      </div>
+      <div class="field split">
+        <div>
+          <label for="pgAccent">Accent</label>
+          <input id="pgAccent" type="color">
+        </div>
+        <div>
+          <label for="pgBg">Background</label>
+          <input id="pgBg" type="color">
+        </div>
+        <div>
+          <label for="pgFont">Font</label>
+          <select id="pgFont">
+            <option value="rounded">Rounded</option>
+            <option value="system">System</option>
+            <option value="mono">Mono</option>
+            <option value="serif">Serif</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="pgLayout">Layout</label>
+        <select id="pgLayout">
+          <option value="centered">Centered</option>
+          <option value="split">Split</option>
+        </select>
+      </div>
+      <button class="btn small" id="republish">Update the page</button>
+
+      <div class="divider"></div>
+
+      <h2 class="section-title">Your own domain</h2>
+      <div class="field">
+        <label for="domain">Domain you own</label>
+        <input id="domain" type="text" placeholder="mygame.com" spellcheck="false">
+      </div>
+      <div class="row tight">
+        <button class="btn small" id="dnsShow">Show records</button>
+        <button class="btn small" id="dnsVerify" disabled>Check it</button>
+      </div>
+      <div id="dnsOut" class="dns-out" hidden></div>
+    </div>
+  </section>
+</main>
+
+<script type="module" src="/app.js"></script>
+</body>
+</html>

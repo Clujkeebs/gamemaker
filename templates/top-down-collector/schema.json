@@ -1,0 +1,120 @@
+{
+  "template_id": "top-down-collector",
+  "version": "1.0.0",
+  "label": "Top-down collector",
+  "blurb": "Roam a maze from above, grab everything, don't get caught.",
+  "primaryVerbs": ["collect", "explore", "dodge", "sneak"],
+  "goodFor": "Overhead games about gathering, exploring, or evading. No gravity, so levels are hard to make impossible — the second safe default.",
+  "reachability": { "kind": "flood", "need": ["G"] },
+  "mechanicHooks": {
+    "dash": "Shift for a short burst of speed.",
+    "sprint": "Hold shift to move faster continuously.",
+    "lantern": "Darkness beyond a small radius around the player.",
+    "magnet": "Nearby collectibles drift toward the player."
+  },
+  "tiles": {
+    ".": "open floor",
+    "#": "wall",
+    "P": "player spawn — exactly one, required",
+    "G": "exit — required when win is reachGoal",
+    "x": "hazard tile, costs a life",
+    "o": "collectible",
+    "e": "enemy spawn"
+  },
+  "config": {
+    "type": "object",
+    "fields": {
+      "seed": { "type": "int", "min": 0, "max": 999999, "default": 3 },
+      "mechanicHooks": {
+        "type": "array", "maxItems": 4, "default": [],
+        "of": { "type": "enum", "values": ["dash", "sprint", "lantern", "magnet"], "default": "dash" }
+      },
+      "theme": {
+        "type": "object",
+        "fields": {
+          "floor":        { "type": "color", "default": "#171b27" },
+          "wall":         { "type": "color", "default": "#3b4560" },
+          "accent":       { "type": "color", "default": "#8be9fd" },
+          "player":       { "type": "color", "default": "#7ee787" },
+          "enemy":        { "type": "color", "default": "#ff6b6b" },
+          "pickup":       { "type": "color", "default": "#ffd166" },
+          "goal":         { "type": "color", "default": "#a78bfa" },
+          "hazard":       { "type": "color", "default": "#ff4d6d" },
+          "floorPattern": { "type": "enum", "values": ["none", "checker", "grid"], "default": "checker" },
+          "pickupName":   { "type": "string", "maxLength": 12, "default": "loot" }
+        }
+      },
+      "entities": {
+        "type": "object",
+        "fields": {
+          "player": {
+            "type": "object",
+            "fields": {
+              "shape": { "type": "enum", "values": ["rect", "round", "circle", "triangle", "diamond", "star", "hexagon", "cross", "blob", "ship", "ghost"], "default": "circle" },
+              "size":  { "type": "int", "min": 6, "max": 24, "default": 12, "doc": "Must be under tileSize or the player can't fit through 1-tile gaps." },
+              "eyes":  { "type": "bool", "default": true }
+            }
+          },
+          "enemy": {
+            "type": "object",
+            "fields": {
+              "shape":    { "type": "enum", "values": ["rect", "round", "circle", "triangle", "diamond", "star", "hexagon", "cross", "blob", "ship", "ghost"], "default": "ghost" },
+              "size":     { "type": "int", "min": 6, "max": 24, "default": 13 },
+              "speed":    { "type": "number", "min": 8, "max": 120, "default": 44, "doc": "px/s. A chaser faster than movement.speed is unwinnable — keep it below." },
+              "behavior": { "type": "enum", "values": ["patrol", "chase", "wander", "guard"], "default": "patrol" },
+              "eyes":     { "type": "bool", "default": true }
+            }
+          },
+          "pickup": {
+            "type": "object",
+            "fields": {
+              "shape": { "type": "enum", "values": ["rect", "round", "circle", "triangle", "diamond", "star", "hexagon", "cross", "blob", "ship", "ghost"], "default": "star" },
+              "size":  { "type": "int", "min": 4, "max": 16, "default": 9 }
+            }
+          }
+        }
+      },
+      "level": {
+        "type": "object",
+        "fields": {
+          "tileSize": { "type": "int", "min": 12, "max": 34, "default": 20 },
+          "grid": {
+            "type": "grid", "minRows": 5, "maxRows": 28, "maxCols": 60,
+            "tiles": [".", "#", "P", "G", "x", "o", "e"],
+            "doc": "Rows of equal length. Enclose the level in walls. Needs one P, and a G when win is reachGoal.",
+            "default": [
+              "########################",
+              "#P...o......#.....o....#",
+              "#.####.####.#.####.###.#",
+              "#....#....#...#..e...#.#",
+              "###..#.##.#####.####.#.#",
+              "#..o.#.#....o....#...#.#",
+              "#.####.#.#######.#.###.#",
+              "#......#.....e...#....G#",
+              "########################"
+            ]
+          }
+        }
+      },
+      "movement": {
+        "type": "object",
+        "fields": {
+          "speed":    { "type": "number", "min": 30, "max": 200, "default": 92, "doc": "px/s. Must exceed enemy speed when behavior is chase." },
+          "accel":    { "type": "number", "min": 4, "max": 40, "default": 18, "doc": "Higher is snappier." },
+          "diagonal": { "type": "bool", "default": true, "doc": "false gives strict 4-direction movement." }
+        }
+      },
+      "rules": {
+        "type": "object",
+        "fields": {
+          "win":            { "type": "enum", "values": ["collectAll", "reachGoal", "survive"], "default": "collectAll" },
+          "goalNeedsAll":   { "type": "bool", "default": false },
+          "surviveSeconds": { "type": "number", "min": 10, "max": 180, "default": 40 },
+          "lives":          { "type": "int", "min": 1, "max": 9, "default": 3 },
+          "timeLimit":      { "type": "number", "min": 0, "max": 600, "default": 0 },
+          "pickupScore":    { "type": "int", "min": 1, "max": 500, "default": 10 }
+        }
+      }
+    }
+  }
+}

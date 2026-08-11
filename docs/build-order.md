@@ -3,7 +3,15 @@
 Ordered so that every stopping point after step 3 is a complete demo, not a
 half-finished one.
 
+**Status: steps 1-5 are built and tested; step 6 is ongoing by design.**
+Each step below carries what actually shipped.
+
 ### 1. Prompt → config → live in-app preview
+
+> **Built.** Two-call pipeline (classify, then configure with only that
+> template's schema in context), sandboxed iframe preview over postMessage,
+> renderer-side clamping, and a reachability pass before first render. Plus an
+> offline generator so the loop works with no API key.
 
 The core loop. Must be rock solid — everything else is a layer on top of it, and
 nothing else matters if this stutters.
@@ -15,6 +23,10 @@ with numeric clamping.
 **Cut point value:** demoable but not shippable. Don't stop here.
 
 ### 2. Conversational editing within a template
+
+> **Built.** Full-config round-trips (never diffs), `changelog_note` surfaced
+> in the log, and `template_switch_required` wired to a one-click rebuild offer
+> that says plainly it discards the current config. Needs an API key.
 
 "Make it harder." "Now it's underwater." "Give him a double jump."
 
@@ -28,6 +40,12 @@ entire pitch.
 
 ### 3. One-click deploy to a subdomain
 
+> **Built.** Bundler, slug allocation with reserved names and collision
+> suffixes, stable-URL republish, and a Netlify file-digest deploy client.
+> Without a token the bundle is still built and served locally, so publish is
+> demoable with no hosting account. The Netlify client is untested against the
+> live API.
+
 Netlify bundle + wildcard DNS on `rumpus.gg`. No custom domains yet.
 
 Needs: bundler, deploy connector call, slug allocation with collision handling,
@@ -39,6 +57,10 @@ here, the story is whole.
 
 ### 4. Arcade page generation + light customization
 
+> **Built.** Its own template and config schema, copy derived from the game
+> (including hook-aware how-to-play steps), and a form UI for title, tagline,
+> colors, font, and layout.
+
 The landing wrapper and its config schema.
 
 Needs: page template, page config schema, AI restyle path plus a form UI for the
@@ -49,6 +71,10 @@ looking like something someone made.
 
 ### 5. Bring your own domain
 
+> **Built.** Record instructions for apex and subdomain cases, verification
+> against public resolvers rather than the system one, honest pending/mismatch
+> states, and automatic attachment once the record resolves.
+
 DNS instruction display, resolution polling with honest status, domain
 attachment and certificate provisioning via the host API.
 
@@ -56,6 +82,10 @@ attachment and certificate provisioning via the host API.
 entirely — see `architecture.md` §5.
 
 ### 6. Template library expansion
+
+> **In progress.** Four of the fifteen archetypes are built:
+> `platformer-classic`, `top-down-collector`, `top-down-shooter`,
+> `breakout-clone` — covering jump, collect, shoot, and bounce.
 
 Add archetypes as time allows, in rough order of how often people ask for them:
 `top-down-shooter`, `breakout-clone`, `endless-runner`, `puzzle-sokoban`,

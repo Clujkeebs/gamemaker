@@ -1,0 +1,17 @@
+{
+  "name": "rumpus",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Describe a game. Play it. Ship it.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "test": "node --test test/run.js && node --test test/pipeline.js",
+    "test:unit": "node --test test/run.js",
+    "test:pipeline": "node --test test/pipeline.js"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "_note": "Regression example: endless mode, fast, with dash-smashing and a shield. Exercises the no-win scoring path and the speed cap.",
+  "seed": 5150,
+  "style": "neon",
+  "mechanicHooks": ["dash", "shield", "doubleJump"],
+  "theme": {
+    "skyTop": "#2b1b3d",
+    "skyBottom": "#08050f",
+    "ground": "#3b2a5c",
+    "accent": "#00e5ff",
+    "player": "#c8f5ff",
+    "obstacle": "#ff2e88",
+    "pickup": "#00e5ff",
+    "hazard": "#ff2e88",
+    "pickupName": "bolts"
+  },
+  "entities": {
+    "player": { "size": 18, "sprite": { "build": "car", "features": [], "eyes": "none", "pattern": "none" } },
+    "obstacle": { "sprite": { "build": "crystal", "features": [], "eyes": "none", "pattern": "plated" } },
+    "pickup": { "size": 11, "icon": "bolt" }
+  },
+  "run": { "speed": 168, "maxSpeed": 330, "ramp": 0.9, "gravity": 1750, "jumpPower": 520, "gapSeconds": 0.95, "pickupChance": 0.45 },
+  "rules": { "win": "endless", "targetDistance": 800, "lives": 3, "pickupScore": 15, "smashScore": 40 }
+}

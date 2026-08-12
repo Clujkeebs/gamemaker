@@ -6,7 +6,9 @@
 // disagreeing about whether a level is winnable.
 
 import { checkReachable, carveTo } from './reachability.js';
+import { checkSokoban, generateSokoban } from './sokoban-solve.js';
 import { TILE } from './tiles.js';
+import { rng, hashString } from './draw.js';
 
 /** Which tiles must be reachable, given what the config says winning means. */
 export function requiredTiles(schema, config) {
@@ -48,6 +50,14 @@ export function checkLevel(schema, config) {
     return { ok: false, reasons: ['config has no level grid'], unreachable: [] };
   }
   const ragged = rows.some((r) => r.length !== rows[0].length);
+
+  // A push puzzle needs a search, not a walk: it can be fully connected and
+  // still impossible, and a walk would happily pass it.
+  if (schema.reachability?.kind === 'sokoban') {
+    const result = checkSokoban(rows);
+    if (ragged) result.reasons.push('level rows are not all the same length (they get padded with air)');
+    return result;
+  }
   const result = checkReachable(
     rows,
     schema.reachability?.kind ?? 'flood',
@@ -67,7 +77,29 @@ export function checkLevel(schema, config) {
  */
 export function repairLevel(schema, config) {
   const check = checkLevel(schema, config);
-  if (check.ok || !check.unreachable?.length) return { config, repaired: false, check };
+  if (check.ok) return { config, repaired: false, check };
+
+  // An unsolvable push puzzle can't be carved open — there is no corridor to
+  // cut. Replace it with one that is solvable by construction, and say so.
+  if (schema.reachability?.kind === 'sokoban') {
+    const rows = config.level.grid;
+    const rand = rng(hashString(JSON.stringify(rows)) || 1);
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const generated = generateSokoban(rand, {
+        w: Math.min(14, Math.max(7, rows[0]?.length ?? 10)),
+        h: Math.min(11, Math.max(5, rows.length)),
+        boxes: Math.max(1, Math.min(4, (rows.join('').match(/[B*]/g) ?? ['B']).length)),
+      });
+      if (!generated) continue;
+      const fixed = structuredClone(config);
+      fixed.level.grid = generated;
+      const after = checkLevel(schema, fixed);
+      if (after.ok) return { config: fixed, repaired: true, check: after };
+    }
+    return { config, repaired: false, check };
+  }
+
+  if (!check.unreachable?.length) return { config, repaired: false, check };
   const fixed = structuredClone(config);
   fixed.level.grid = carveTo(config.level.grid, check.unreachable);
   return { config: fixed, repaired: true, check: checkLevel(schema, fixed) };

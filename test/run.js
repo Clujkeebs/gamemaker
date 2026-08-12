@@ -15,6 +15,9 @@ import { generateOffline, classifyOffline } from '../server/offline.js';
 import { simulate } from './harness.js';
 import { composeMask, BUILD_NAMES, OVERLAY_NAMES, PICKUPS, RES } from '../shared/sprites.js';
 import { STYLES, STYLE_NAMES } from '../shared/styles.js';
+import { checkSokoban, structuralProblems, generateSokoban, solve as solveSokoban } from '../shared/sokoban-solve.js';
+import { parseSokoban } from '../shared/sokoban.js';
+import { rng } from '../shared/draw.js';
 
 const all = [...templates.values()];
 const arcadeSchema = JSON.parse(readFileSync(join(ROOT, 'arcade', 'schema.json'), 'utf8'));
@@ -552,4 +555,128 @@ test('published bundles ship the sprite and style modules the engine needs', () 
     assert.ok(files.includes(needed), `bundle is missing ${needed} — the published game would not render`);
   }
   rmSync(outDir, { recursive: true, force: true });
+});
+
+// ── sokoban solvability ─────────────────────────────────────────────────────
+
+test('the solver proves a trivial push puzzle solvable', () => {
+  const res = checkSokoban(['#######', '#..T..#', '#..B..#', '#..P..#', '#######']);
+  assert.equal(res.ok, true);
+  assert.equal(res.status, 'solved');
+  assert.equal(res.pushes, 1);
+});
+
+test('a crate wedged in a corner is caught without any search', () => {
+  const res = checkSokoban(['#######', '#B....#', '#....T#', '#..P..#', '#######']);
+  assert.equal(res.ok, false);
+  assert.match(res.reasons[0], /wedged in a corner/);
+});
+
+test('a connected but impossible puzzle is proved unsolvable', () => {
+  // Every cell is reachable and no crate starts in a corner, so a flood fill
+  // would happily pass this. The crate can only leave its chamber downwards,
+  // and the target sits at the top of a column it can never be pushed up.
+  const res = checkSokoban([
+    '########',
+    '#T.....#',
+    '#.####.#',
+    '#.#..#.#',
+    '#.#B.#.#',
+    '#.#..#.#',
+    '#..P...#',
+    '########',
+  ]);
+  assert.equal(res.ok, false);
+  assert.equal(res.status, 'unsolvable');
+  assert.match(res.reasons[0], /no sequence of pushes/);
+});
+
+test('structural problems are reported before the search runs', () => {
+  assert.match(structuralProblems(parseSokoban(['####', '#B.#', '####'])).join(' '), /no player spawn/);
+  assert.match(structuralProblems(parseSokoban(['#####', '#PB.#', '#####'])).join(' '), /no targets/);
+  assert.match(
+    structuralProblems(parseSokoban(['######', '#PB..#', '#.TT.#', '######'])).join(' '),
+    /1 box\(es\) for 2 target\(s\)/
+  );
+});
+
+test('a level the solver cannot settle is reported as unverified, not as broken', () => {
+  // Budget deliberately starved. The honest answer is "I do not know" — calling
+  // a fine level unsolvable because we ran out of states would throw it away.
+  const state = parseSokoban(exampleConfig('puzzle-sokoban').level.grid);
+  const res = solveSokoban(state, { cap: 1 });
+  assert.equal(res.status, 'unknown');
+});
+
+test('generated push puzzles are solvable by construction', () => {
+  // Reverse-pull construction means solvability is structural, not searched
+  // for. If this ever fails, the construction is wrong — not the solver.
+  let checked = 0;
+  for (let seed = 1; seed <= 25; seed++) {
+    const rows = generateSokoban(rng(seed * 7919), { boxes: 3, pulls: 26 });
+    if (!rows) continue; // degenerate roll, legitimately rejected
+    const res = checkSokoban(rows);
+    assert.equal(res.status, 'solved', `seed ${seed}: ${res.reasons.join('; ')}`);
+    checked += 1;
+  }
+  assert.ok(checked >= 20, `expected most seeds to yield a puzzle, got ${checked}`);
+});
+
+test('an unsolvable push puzzle is replaced rather than carved', () => {
+  const t = templates.get('puzzle-sokoban');
+  const cfg = validate(exampleConfig('puzzle-sokoban'), t.schema).config;
+  cfg.level.grid = [
+    '##########',
+    '#B.......#',
+    '#..T.....#',
+    '#........#',
+    '#...P....#',
+    '#........#',
+    '##########',
+  ];
+  assert.equal(checkLevel(t.schema, cfg).ok, false);
+  const fixed = repairLevel(t.schema, cfg);
+  assert.equal(fixed.repaired, true);
+  assert.equal(fixed.check.ok, true, `still unsolvable: ${fixed.check.reasons.join('; ')}`);
+  // Carving a corridor is meaningless here; the level must actually differ.
+  assert.notDeepEqual(fixed.config.level.grid, cfg.level.grid);
+});
+
+test('published push puzzles do not ship the solver', () => {
+  // The verifier runs before anything is written. Shipping it would be dead
+  // weight in every published bundle.
+  const game = generateOffline('a robot pushing crates around a warehouse');
+  assert.equal(game.template_id, 'puzzle-sokoban');
+  const page = defaultPage(game, defaultsFor(arcadeSchema.config));
+  const outDir = join(ROOT, 'dist', '__soko_test__');
+  const { files } = buildBundle({ game, page, outDir });
+  assert.ok(files.includes('shared/sokoban.js'), 'the engine needs the rules');
+  assert.ok(!files.includes('shared/sokoban-solve.js'), 'the solver leaked into a published bundle');
+  rmSync(outDir, { recursive: true, force: true });
+});
+
+test('the runner declares no level check, because it has no level to check', () => {
+  assert.equal(templates.get('endless-runner').schema.reachability, null);
+});
+
+test('new templates are classified from their own vocabulary', () => {
+  assert.equal(classifyOffline('an endless runner across the rooftops').template_id, 'endless-runner');
+  assert.equal(classifyOffline('a robot pushing crates in a warehouse').template_id, 'puzzle-sokoban');
+  assert.equal(classifyOffline('a puzzle about shoving boxes onto markers').template_id, 'puzzle-sokoban');
+});
+
+test('keyword inference matches words, not substrings', () => {
+  // The bug this pins: "crates" contains "rat", so a warehouse puzzle was
+  // handing the player a rodent. Every keyword list in the offline generator
+  // shares this hazard, so check a few of the nastier collisions.
+  const soko = generateOffline('a robot pushing crates around a warehouse');
+  assert.equal(soko.config.entities.player.sprite.build, 'biped', 'crates matched "rat"');
+  assert.ok(soko.config.entities.player.sprite.features.includes('visor'), 'lost the robot');
+
+  // "police" contains "ice", which must not drag in the ice palette.
+  const police = generateOffline('a police officer chasing a thief downtown');
+  assert.notEqual(police.config.theme.skyTop, '#12354f', '"police" matched the ice palette');
+
+  // Prefix matching is still wanted: "pushing" should match the "push" signal.
+  assert.equal(classifyOffline('pushing blocks onto switches').template_id, 'puzzle-sokoban');
 });

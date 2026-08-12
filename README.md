@@ -17,7 +17,7 @@ you change it by talking to it, and publishes it to a link you can share.
 
 ```bash
 npm start          # http://localhost:4173
-npm test           # 54 tests, no network needed
+npm test           # 65 tests, no network needed
 ```
 
 No install step. No build step. No dependencies — Node 20+ and nothing else.
@@ -87,10 +87,14 @@ Browse every part in every style at `/styles.html`.
 2. **Range clamping.** Out-of-range numbers are clamped and logged, never
    rejected — the value that plays beats the error nobody reads. This runs in the
    renderer too, so the prompt is never the only guard.
-3. **Reachability.** A flood fill (top-down) or jump-aware search (platformers)
-   proves the win condition is actually reachable before anything renders. Jump
-   reach is derived from the config's own gravity and jump power. Unwinnable
-   levels get reseeded, then carved open as a last resort.
+3. **Winnability.** Each template declares how its levels get checked, because
+   "winnable" means something different per archetype: a flood fill for top-down
+   games, a jump-aware search for platformers (reach derived from the config's
+   own gravity and jump power), and a **bounded solver** for the push puzzle,
+   which can be fully connected and still impossible. Unwinnable levels get
+   reseeded, then carved open — or, for a push puzzle, replaced with one that is
+   solvable by construction. A level the solver can't settle inside its budget
+   is reported as unverified, never as broken.
 4. **Headless simulation.** Every example config runs 20 seconds of real game
    time in the test suite, plus every schema minimum and maximum.
 
@@ -102,6 +106,12 @@ Browse every part in every style at `/styles.html`.
 | `top-down-collector` | collect, sneak, explore | dash, sprint, lantern, magnet |
 | `top-down-shooter` | shoot, survive | spread, pierce, dashRoll, shield, homing |
 | `breakout-clone` | bounce, break | multiball, sticky, lasers, widen |
+| `endless-runner` | run, jump, duck | doubleJump, duck, dash, magnet, shield |
+| `puzzle-sokoban` | push, plan | undo, deadlockWarning, sprint |
+
+Two of them can't be built wrong at all: the runner has no authored level, and
+generated push puzzles are built by reverse-pulling crates from the solved
+position, so solvability is structural rather than searched for.
 
 Each ships an engine, a schema with safe ranges, a hook list, and 2+ example
 configs used as regression tests. Adding a template means adding all five —
@@ -116,7 +126,7 @@ templates/    one directory per archetype: engine.js + schema.json + examples/
 arcade/       the landing-page template and its own config schema
 server/       zero-dep HTTP server, generation pipeline, bundler, deploy, DNS
 web/          the editor, plus /styles.html — the sprite and style gallery
-test/         54 tests, including a mock Claude endpoint
+test/         65 tests, including a mock Claude endpoint
 ```
 
 ## Docs

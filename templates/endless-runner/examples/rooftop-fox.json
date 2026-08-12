@@ -1,0 +1,24 @@
+{
+  "_note": "Regression example: 'a fox sprinting across rooftops at sunset'. Exercises duck + doubleJump and a distance win.",
+  "seed": 77,
+  "style": "storybook",
+  "mechanicHooks": ["doubleJump", "duck", "magnet"],
+  "theme": {
+    "skyTop": "#e07a5f",
+    "skyBottom": "#2b1b3d",
+    "ground": "#5b4a6b",
+    "accent": "#ffd166",
+    "player": "#e8853f",
+    "obstacle": "#3d2d4f",
+    "pickup": "#ffe066",
+    "hazard": "#ff4d6d",
+    "pickupName": "coins"
+  },
+  "entities": {
+    "player": { "size": 18, "sprite": { "build": "quadruped", "features": ["earsPointed", "tail"], "eyes": "big", "pattern": "belly" } },
+    "obstacle": { "sprite": { "build": "crystal", "features": [], "eyes": "none", "pattern": "none" } },
+    "pickup": { "size": 11, "icon": "coin" }
+  },
+  "run": { "speed": 132, "maxSpeed": 250, "ramp": 0.5, "gravity": 1500, "jumpPower": 470, "gapSeconds": 1.15, "pickupChance": 0.55 },
+  "rules": { "win": "distance", "targetDistance": 600, "lives": 3, "pickupScore": 10, "smashScore": 25 }
+}

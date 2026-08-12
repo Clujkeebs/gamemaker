@@ -83,13 +83,20 @@ entirely — see `architecture.md` §5.
 
 ### 6. Template library expansion
 
-> **In progress.** Four of the fifteen archetypes are built:
+> **In progress.** Six of the fifteen archetypes are built:
 > `platformer-classic`, `top-down-collector`, `top-down-shooter`,
-> `breakout-clone` — covering jump, collect, shoot, and bounce.
+> `breakout-clone`, `endless-runner`, `puzzle-sokoban` — covering jump,
+> collect, shoot, bounce, run, and push.
+>
+> The push puzzle was the one that needed new infrastructure rather than just a
+> new engine: "winnable" there is a search, not a walk, so it brought a bounded
+> solver, deadlock detection, and reverse-pull level generation with it. Worth
+> knowing before picking the next archetype — `match-3` and `physics-puzzle`
+> will each want their own notion of a valid level too.
 
-Add archetypes as time allows, in rough order of how often people ask for them:
-`top-down-shooter`, `breakout-clone`, `endless-runner`, `puzzle-sokoban`,
-`match-3`, then the rest.
+Remaining, in rough order of how often people ask for them: `match-3`,
+`physics-puzzle`, `maze-stealth`, `racing-topdown`, `tower-defense-lite`,
+`rhythm-timing`, `idle-clicker`, `card-battler-lite`.
 
 Each new template is a fixed cost: engine + schema + safe ranges + 2-3 example
 configs + hook list. Don't add one without all five, and don't let the AI's

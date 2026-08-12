@@ -1,0 +1,35 @@
+{
+  "_note": "Regression example: three crates, tighter room, storybook style. Exercises a crate that starts already on a target (*).",
+  "seed": 404,
+  "style": "storybook",
+  "mechanicHooks": ["undo", "sprint"],
+  "theme": {
+    "floor": "#241a2e",
+    "wall": "#6b4a5c",
+    "box": "#d98c5f",
+    "target": "#a3e635",
+    "accent": "#ffd166",
+    "player": "#ffe9c9",
+    "stuck": "#ff6b6b",
+    "floorPattern": "checker",
+    "boxName": "presents"
+  },
+  "entities": {
+    "player": { "size": 16, "sprite": { "build": "biped", "features": ["scarf"], "eyes": "big", "pattern": "belly" } }
+  },
+  "level": {
+    "tileSize": 24,
+    "grid": [
+      "###########",
+      "#.........#",
+      "#..T...T..#",
+      "#.........#",
+      "#..B.*.B..#",
+      "#.........#",
+      "#....P....#",
+      "#.........#",
+      "###########"
+    ]
+  },
+  "rules": { "moveLimit": 0, "repeatDelay": 0.16, "animSpeed": 18 }
+}

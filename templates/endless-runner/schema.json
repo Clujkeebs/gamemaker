@@ -1,0 +1,381 @@
+{
+  "template_id": "endless-runner",
+  "version": "1.0.0",
+  "label": "Endless runner",
+  "blurb": "The world scrolls at you. Jump it, duck it, or eat it.",
+  "primaryVerbs": [
+    "run",
+    "jump",
+    "dodge",
+    "duck",
+    "survive"
+  ],
+  "goodFor": "Anything about running, escaping, chasing, or not stopping. There is no authored level, so it cannot be built wrong \u2014 the safest template in the library.",
+  "reachability": null,
+  "mechanicHooks": {
+    "doubleJump": "A second jump in mid-air.",
+    "duck": "Hold down to slide under overhead bars. Enables overhead obstacles.",
+    "dash": "Shift to smash straight through a ground obstacle.",
+    "magnet": "Nearby collectibles drift toward the player.",
+    "shield": "Absorbs one hit, then breaks."
+  },
+  "config": {
+    "type": "object",
+    "fields": {
+      "seed": {
+        "type": "int",
+        "min": 0,
+        "max": 999999,
+        "default": 13,
+        "doc": "Fixes the obstacle stream."
+      },
+      "style": {
+        "type": "enum",
+        "values": [
+          "pixel",
+          "neon",
+          "storybook",
+          "clay"
+        ],
+        "default": "pixel",
+        "doc": "Art direction for the WHOLE game and its landing page: sprite outlines and shading, terrain tiles, hazards, particles, HUD chrome, and the published page's fonts and borders."
+      },
+      "mechanicHooks": {
+        "type": "array",
+        "maxItems": 5,
+        "default": [],
+        "of": {
+          "type": "enum",
+          "values": [
+            "doubleJump",
+            "duck",
+            "dash",
+            "magnet",
+            "shield"
+          ],
+          "default": "doubleJump"
+        }
+      },
+      "theme": {
+        "type": "object",
+        "fields": {
+          "skyTop": {
+            "type": "color",
+            "default": "#2b3a67"
+          },
+          "skyBottom": {
+            "type": "color",
+            "default": "#0f1424"
+          },
+          "ground": {
+            "type": "color",
+            "default": "#4a5b7d"
+          },
+          "accent": {
+            "type": "color",
+            "default": "#ffd166"
+          },
+          "player": {
+            "type": "color",
+            "default": "#7ee787"
+          },
+          "obstacle": {
+            "type": "color",
+            "default": "#ff6b6b"
+          },
+          "pickup": {
+            "type": "color",
+            "default": "#ffd166"
+          },
+          "hazard": {
+            "type": "color",
+            "default": "#ff4d6d"
+          },
+          "pickupName": {
+            "type": "string",
+            "maxLength": 12,
+            "default": "coins"
+          }
+        }
+      },
+      "entities": {
+        "type": "object",
+        "fields": {
+          "player": {
+            "type": "object",
+            "fields": {
+              "size": {
+                "type": "int",
+                "min": 10,
+                "max": 30,
+                "default": 18,
+                "doc": "Pixels. Bigger is easier to hit."
+              },
+              "sprite": {
+                "type": "object",
+                "doc": "What the runner looks like.",
+                "fields": {
+                  "build": {
+                    "type": "enum",
+                    "values": [
+                      "biped",
+                      "blob",
+                      "orb",
+                      "ship",
+                      "ghost",
+                      "bug",
+                      "crystal",
+                      "quadruped",
+                      "bird",
+                      "fish",
+                      "car"
+                    ],
+                    "default": "quadruped",
+                    "doc": "Body plan. quadruped/bird/fish/car are side-facing, which suits a runner."
+                  },
+                  "features": {
+                    "type": "array",
+                    "maxItems": 3,
+                    "of": {
+                      "type": "enum",
+                      "values": [
+                        "earsPointed",
+                        "earsRound",
+                        "horns",
+                        "antenna",
+                        "crown",
+                        "visor",
+                        "scarf",
+                        "wings",
+                        "cape",
+                        "tail"
+                      ],
+                      "default": "tail"
+                    },
+                    "default": [],
+                    "doc": "Parts layered on the body."
+                  },
+                  "eyes": {
+                    "type": "enum",
+                    "values": [
+                      "dot",
+                      "big",
+                      "angry",
+                      "visor",
+                      "none"
+                    ],
+                    "default": "big"
+                  },
+                  "pattern": {
+                    "type": "enum",
+                    "values": [
+                      "none",
+                      "stripes",
+                      "spots",
+                      "belly",
+                      "plated"
+                    ],
+                    "default": "none"
+                  }
+                }
+              }
+            }
+          },
+          "obstacle": {
+            "type": "object",
+            "fields": {
+              "sprite": {
+                "type": "object",
+                "doc": "What the things you jump over look like.",
+                "fields": {
+                  "build": {
+                    "type": "enum",
+                    "values": [
+                      "biped",
+                      "blob",
+                      "orb",
+                      "ship",
+                      "ghost",
+                      "bug",
+                      "crystal",
+                      "quadruped",
+                      "bird",
+                      "fish",
+                      "car"
+                    ],
+                    "default": "crystal",
+                    "doc": "Body plan. quadruped/bird/fish/car are side-facing, which suits a runner."
+                  },
+                  "features": {
+                    "type": "array",
+                    "maxItems": 3,
+                    "of": {
+                      "type": "enum",
+                      "values": [
+                        "earsPointed",
+                        "earsRound",
+                        "horns",
+                        "antenna",
+                        "crown",
+                        "visor",
+                        "scarf",
+                        "wings",
+                        "cape",
+                        "tail"
+                      ],
+                      "default": "tail"
+                    },
+                    "default": [],
+                    "doc": "Parts layered on the body."
+                  },
+                  "eyes": {
+                    "type": "enum",
+                    "values": [
+                      "dot",
+                      "big",
+                      "angry",
+                      "visor",
+                      "none"
+                    ],
+                    "default": "none"
+                  },
+                  "pattern": {
+                    "type": "enum",
+                    "values": [
+                      "none",
+                      "stripes",
+                      "spots",
+                      "belly",
+                      "plated"
+                    ],
+                    "default": "none"
+                  }
+                }
+              }
+            }
+          },
+          "pickup": {
+            "type": "object",
+            "fields": {
+              "size": {
+                "type": "int",
+                "min": 6,
+                "max": 18,
+                "default": 11
+              },
+              "icon": {
+                "type": "enum",
+                "values": [
+                  "coin",
+                  "gem",
+                  "star",
+                  "heart",
+                  "key",
+                  "orb",
+                  "fruit",
+                  "bolt",
+                  "shell",
+                  "skull"
+                ],
+                "default": "coin",
+                "doc": "Match theme.pickupName."
+              }
+            }
+          }
+        }
+      },
+      "run": {
+        "type": "object",
+        "fields": {
+          "speed": {
+            "type": "number",
+            "min": 70,
+            "max": 260,
+            "default": 132,
+            "doc": "Starting px/s of world scroll."
+          },
+          "maxSpeed": {
+            "type": "number",
+            "min": 90,
+            "max": 420,
+            "default": 260,
+            "doc": "Hard cap. Without one a long run becomes unavoidable."
+          },
+          "ramp": {
+            "type": "number",
+            "min": 0,
+            "max": 3,
+            "default": 0.5,
+            "doc": "px/s gained per metre run."
+          },
+          "gravity": {
+            "type": "number",
+            "min": 600,
+            "max": 2600,
+            "default": 1500
+          },
+          "jumpPower": {
+            "type": "number",
+            "min": 260,
+            "max": 700,
+            "default": 470,
+            "doc": "Jump height = jumpPower\u00b2/(2\u00b7gravity); keep it over ~55px or obstacles are unclearable."
+          },
+          "gapSeconds": {
+            "type": "number",
+            "min": 0.55,
+            "max": 3,
+            "default": 1.15,
+            "doc": "Seconds between spawns. Below ~0.7 gets brutal."
+          },
+          "pickupChance": {
+            "type": "number",
+            "min": 0,
+            "max": 1,
+            "default": 0.55
+          }
+        }
+      },
+      "rules": {
+        "type": "object",
+        "fields": {
+          "win": {
+            "type": "enum",
+            "values": [
+              "distance",
+              "endless"
+            ],
+            "default": "distance",
+            "doc": "endless has no win \u2014 you play for score."
+          },
+          "targetDistance": {
+            "type": "int",
+            "min": 100,
+            "max": 5000,
+            "default": 800,
+            "doc": "Metres to win, when win is distance."
+          },
+          "lives": {
+            "type": "int",
+            "min": 1,
+            "max": 9,
+            "default": 3
+          },
+          "pickupScore": {
+            "type": "int",
+            "min": 1,
+            "max": 500,
+            "default": 10
+          },
+          "smashScore": {
+            "type": "int",
+            "min": 1,
+            "max": 500,
+            "default": 25,
+            "doc": "Only reachable with the dash hook."
+          }
+        }
+      }
+    }
+  }
+}

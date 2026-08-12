@@ -1,0 +1,35 @@
+{
+  "_note": "Regression example: 'a robot tidying a warehouse'. Hand-authored, verified solvable by the bounded solver.",
+  "seed": 17,
+  "style": "pixel",
+  "mechanicHooks": ["undo", "deadlockWarning"],
+  "theme": {
+    "floor": "#1b1f2e",
+    "wall": "#3b4560",
+    "box": "#b07d4a",
+    "target": "#7ee787",
+    "accent": "#ffd166",
+    "player": "#8be9fd",
+    "stuck": "#ff6b6b",
+    "floorPattern": "checker",
+    "boxName": "crates"
+  },
+  "entities": {
+    "player": { "size": 16, "sprite": { "build": "biped", "features": ["visor", "antenna"], "eyes": "visor", "pattern": "plated" } }
+  },
+  "level": {
+    "tileSize": 26,
+    "grid": [
+      "##########",
+      "#........#",
+      "#.T....T.#",
+      "#........#",
+      "#..B..B..#",
+      "#........#",
+      "#...P....#",
+      "#........#",
+      "##########"
+    ]
+  },
+  "rules": { "moveLimit": 0, "repeatDelay": 0.16, "animSpeed": 18 }
+}

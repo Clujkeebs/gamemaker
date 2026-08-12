@@ -190,6 +190,33 @@ Details that carry most of the quality, and are easy to get wrong:
 `web/styles.html` renders every part in every style. It is the page to look at
 before and after changing a mask.
 
+### "Winnable" is per-archetype
+
+Each template declares how its levels are checked, because the question changes
+shape with the mechanic:
+
+- **flood** — a 4-directional walk. Top-down games.
+- **platform** — a jump-aware search, with reach derived from the config's own
+  gravity and jump power rather than a constant.
+- **sokoban** — a real search. A push puzzle can be fully connected, have no
+  crate in a corner, and still be impossible; a walk passes it happily. So this
+  runs structural checks (enough crates, no crate already wedged in a corner),
+  then a bounded breadth-first search over push-states with dead-corner pruning.
+- **null** — nothing to check. The runner has no authored level at all.
+
+Two things about the solver are worth stating plainly. First, when it exhausts
+its state budget it reports **unknown**, and the level is let through with a
+note — claiming a level is unsolvable because we ran out of budget would be a
+lie, and would throw away levels that are fine. Second, repair can't carve a
+corridor through a push puzzle, so an unsolvable one is *replaced* with a
+generated level instead.
+
+Generated push puzzles don't need the solver at all: they're built by starting
+from the solved position and **pulling** crates backwards. Every pull is a push
+in reverse, so replaying them forwards is a guaranteed solution. Same trick as
+generating a maze from a spanning tree — make the property structural instead
+of searching for it. The solver then only has to police what the *model* writes.
+
 ### One style token governs everything
 
 `style` is a single enum — `pixel`, `neon`, `storybook`, `clay` — and it drives

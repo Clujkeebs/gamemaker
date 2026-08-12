@@ -1,0 +1,261 @@
+{
+  "template_id": "puzzle-sokoban",
+  "version": "1.0.0",
+  "label": "Crate pusher",
+  "blurb": "Shove every crate onto a marker. You can only push, never pull.",
+  "primaryVerbs": [
+    "push",
+    "solve",
+    "plan",
+    "think"
+  ],
+  "goodFor": "Puzzle games about arranging, delivering, or shoving things into place. Slow and deliberate \u2014 pick it when the idea is about thinking, not reflexes.",
+  "reachability": {
+    "kind": "sokoban"
+  },
+  "mechanicHooks": {
+    "undo": "X steps one move backwards. Almost always worth including.",
+    "deadlockWarning": "Outlines a crate that has been shoved somewhere it can never leave.",
+    "sprint": "Hold shift to repeat moves faster."
+  },
+  "tiles": {
+    "#": "wall",
+    ".": "floor",
+    "P": "player spawn \u2014 exactly one, required",
+    "B": "crate",
+    "T": "target marker",
+    "*": "crate already sitting on a target",
+    "+": "player standing on a target"
+  },
+  "config": {
+    "type": "object",
+    "fields": {
+      "seed": {
+        "type": "int",
+        "min": 0,
+        "max": 999999,
+        "default": 17
+      },
+      "style": {
+        "type": "enum",
+        "values": [
+          "pixel",
+          "neon",
+          "storybook",
+          "clay"
+        ],
+        "default": "pixel",
+        "doc": "Art direction for the WHOLE game and its landing page: sprite outlines and shading, terrain tiles, particles, HUD chrome, and the published page's fonts and borders."
+      },
+      "mechanicHooks": {
+        "type": "array",
+        "maxItems": 3,
+        "default": [
+          "undo"
+        ],
+        "of": {
+          "type": "enum",
+          "values": [
+            "undo",
+            "deadlockWarning",
+            "sprint"
+          ],
+          "default": "undo"
+        }
+      },
+      "theme": {
+        "type": "object",
+        "fields": {
+          "floor": {
+            "type": "color",
+            "default": "#1b1f2e"
+          },
+          "wall": {
+            "type": "color",
+            "default": "#3b4560"
+          },
+          "box": {
+            "type": "color",
+            "default": "#b07d4a"
+          },
+          "target": {
+            "type": "color",
+            "default": "#7ee787"
+          },
+          "accent": {
+            "type": "color",
+            "default": "#ffd166"
+          },
+          "player": {
+            "type": "color",
+            "default": "#8be9fd"
+          },
+          "stuck": {
+            "type": "color",
+            "default": "#ff6b6b",
+            "doc": "Outline for a crate that can never move again."
+          },
+          "floorPattern": {
+            "type": "enum",
+            "values": [
+              "none",
+              "checker"
+            ],
+            "default": "checker"
+          },
+          "boxName": {
+            "type": "string",
+            "maxLength": 12,
+            "default": "crates",
+            "doc": "Plural noun in the HUD, e.g. 'barrels', 'presents'."
+          }
+        }
+      },
+      "entities": {
+        "type": "object",
+        "fields": {
+          "player": {
+            "type": "object",
+            "fields": {
+              "size": {
+                "type": "int",
+                "min": 8,
+                "max": 26,
+                "default": 16,
+                "doc": "Keep under tileSize."
+              },
+              "sprite": {
+                "type": "object",
+                "doc": "What the pusher looks like.",
+                "fields": {
+                  "build": {
+                    "type": "enum",
+                    "values": [
+                      "biped",
+                      "blob",
+                      "orb",
+                      "ship",
+                      "ghost",
+                      "bug",
+                      "crystal",
+                      "quadruped",
+                      "bird",
+                      "fish",
+                      "car"
+                    ],
+                    "default": "biped"
+                  },
+                  "features": {
+                    "type": "array",
+                    "maxItems": 3,
+                    "of": {
+                      "type": "enum",
+                      "values": [
+                        "earsPointed",
+                        "earsRound",
+                        "horns",
+                        "antenna",
+                        "crown",
+                        "visor",
+                        "scarf",
+                        "wings",
+                        "cape",
+                        "tail"
+                      ],
+                      "default": "scarf"
+                    },
+                    "default": []
+                  },
+                  "eyes": {
+                    "type": "enum",
+                    "values": [
+                      "dot",
+                      "big",
+                      "angry",
+                      "visor",
+                      "none"
+                    ],
+                    "default": "big"
+                  },
+                  "pattern": {
+                    "type": "enum",
+                    "values": [
+                      "none",
+                      "stripes",
+                      "spots",
+                      "belly",
+                      "plated"
+                    ],
+                    "default": "none"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "level": {
+        "type": "object",
+        "fields": {
+          "tileSize": {
+            "type": "int",
+            "min": 14,
+            "max": 40,
+            "default": 26
+          },
+          "grid": {
+            "type": "grid",
+            "minRows": 5,
+            "maxRows": 18,
+            "maxCols": 24,
+            "tiles": [
+              "#",
+              ".",
+              "P",
+              "B",
+              "T",
+              "*",
+              "+"
+            ],
+            "doc": "Rows of equal length, walled all the way round. Exactly one P. At least as many B as T. A crate pushed into a corner can never come out, so never start one there.",
+            "default": [
+              "##########",
+              "#........#",
+              "#..T.....#",
+              "#..B.....#",
+              "#...P....#",
+              "#........#",
+              "##########"
+            ]
+          }
+        }
+      },
+      "rules": {
+        "type": "object",
+        "fields": {
+          "moveLimit": {
+            "type": "int",
+            "min": 0,
+            "max": 999,
+            "default": 0,
+            "doc": "0 means unlimited. A limit on a puzzle this unforgiving is usually a mistake."
+          },
+          "repeatDelay": {
+            "type": "number",
+            "min": 0.08,
+            "max": 0.5,
+            "default": 0.16,
+            "doc": "Seconds between steps when a direction is held."
+          },
+          "animSpeed": {
+            "type": "number",
+            "min": 6,
+            "max": 40,
+            "default": 18,
+            "doc": "How fast the sprite catches up to its grid cell."
+          }
+        }
+      }
+    }
+  }
+}

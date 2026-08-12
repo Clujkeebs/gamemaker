@@ -7,16 +7,32 @@
 
 import { rng, hashString, mix } from '../shared/draw.js';
 import { checkLevel, repairLevel } from '../shared/levelcheck.js';
+import { generateSokoban } from '../shared/sokoban-solve.js';
 import { get, exampleConfig } from './registry.js';
 import { STYLE_NAMES } from '../shared/styles.js';
 
 // --- classification ---------------------------------------------------------
+
+/**
+ * Keyword matching with a word boundary at the START of the keyword.
+ *
+ * Plain substring matching looks fine until it isn't: "crates" contains "rat",
+ * so a warehouse puzzle got a rodent for a protagonist. A leading \b fixes that
+ * while still letting a keyword act as a prefix — "push" matches "pushing",
+ * "burgl" matches "burglary" — which is how most of these lists are written.
+ */
+const esc = (w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const hasWord = (text, word) => new RegExp(`\\b${esc(word)}`, 'i').test(text);
+const countWords = (text, words) =>
+  words.reduce((n, w) => n + (hasWord(text, w) ? (w.includes(' ') ? 2 : 1) : 0), 0);
 
 const SIGNALS = {
   'top-down-shooter': ['shoot', 'shooter', 'gun', 'blast', 'bullet', 'laser', 'wave', 'defend', 'invasion', 'swarm', 'army', 'zombie', 'alien', 'turret', 'fight off', 'survive'],
   'breakout-clone': ['brick', 'break', 'smash', 'paddle', 'bounce', 'ball', 'breakout', 'demolish', 'wall of', 'knock down', 'shatter'],
   'top-down-collector': ['collect', 'gather', 'maze', 'sneak', 'stealth', 'avoid', 'escape', 'loot', 'steal', 'rob', 'heist', 'burgl', 'patrol', 'guard', 'hoard', 'find', 'explore', 'top down', 'top-down', 'overhead', 'pick up', 'grab', 'harvest'],
   'platformer-classic': ['jump', 'platform', 'platformer', 'leap', 'hop', 'climb', 'side scroll', 'side-scroll', 'gravity', 'spikes', 'flag', 'run and jump', 'ninja', 'mario'],
+  'endless-runner': ['endless', 'runner', 'running', 'sprint', 'auto scroll', 'auto-scroll', 'never stop', 'keep running', 'chase', 'outrun', 'race away', 'flee', 'marathon', 'treadmill'],
+  'puzzle-sokoban': ['push', 'pushing', 'crate', 'box', 'boxes', 'sokoban', 'puzzle', 'warehouse', 'shove', 'arrange', 'sort', 'tidy', 'stack', 'deliver', 'block puzzle'],
 };
 
 export function classifyOffline(prompt) {
@@ -25,7 +41,7 @@ export function classifyOffline(prompt) {
   let bestScore = 0;
   for (const [id, words] of Object.entries(SIGNALS)) {
     let score = 0;
-    for (const w of words) if (text.includes(w)) score += w.includes(' ') ? 3 : 2;
+    for (const w of words) if (hasWord(text, w)) score += w.includes(' ') ? 3 : 2;
     if (score > bestScore) {
       bestScore = score;
       best = id;
@@ -55,7 +71,7 @@ function pickPalette(prompt) {
   let best = null;
   let bestScore = 0;
   for (const [name, p] of Object.entries(PALETTES)) {
-    const score = p.words.reduce((n, w) => n + (text.includes(w) ? 1 : 0), 0);
+    const score = p.words.reduce((n, w) => n + (hasWord(text, w) ? 1 : 0), 0);
     if (score > bestScore) {
       bestScore = score;
       best = { name, ...p };
@@ -94,7 +110,7 @@ const COLLECTIBLES = [
 function noun(prompt, fallback = 'loot') {
   const text = prompt.toLowerCase();
   // Match the plural we display, but accept the singular in the prompt.
-  const found = COLLECTIBLES.find((c) => text.includes(c) || text.includes(c.replace(/s$/, '')));
+  const found = COLLECTIBLES.find((c) => hasWord(text, c.replace(/s$/, '')));
   return (found ?? fallback).slice(0, 12);
 }
 
@@ -114,7 +130,7 @@ function pickStyle(prompt) {
   let best = null;
   let bestScore = 0;
   for (const [name, words] of Object.entries(STYLE_SIGNALS)) {
-    const score = words.reduce((n, w) => n + (text.includes(w) ? (w.includes(' ') ? 2 : 1) : 0), 0);
+    const score = countWords(text, words);
     if (score > bestScore) {
       bestScore = score;
       best = name;
@@ -150,7 +166,7 @@ const CREATURES = [
 function creatureFrom(prompt, fallback, { angry = false } = {}) {
   const text = prompt.toLowerCase();
   for (const [words, spec] of CREATURES) {
-    if (words.some((w) => text.includes(w))) {
+    if (words.some((w) => hasWord(text, w))) {
       return { eyes: angry ? 'angry' : 'big', pattern: 'none', features: [], ...spec };
     }
   }
@@ -174,7 +190,7 @@ const ICONS = {
 function iconFrom(prompt, fallback = 'coin') {
   const text = prompt.toLowerCase();
   for (const [icon, words] of Object.entries(ICONS)) {
-    if (words.some((w) => text.includes(w))) return icon;
+    if (words.some((w) => hasWord(text, w))) return icon;
   }
   return fallback;
 }
@@ -291,6 +307,26 @@ function genMazeGrid(rand, { cols = 25, rows = 13, openness = 0.12, pickups = 8,
   return g.map((r) => r.join(''));
 }
 
+/**
+ * A runner needs no level at all, and a push puzzle needs one that is solvable
+ * by construction — neither goes through genPlatformerGrid.
+ */
+function genSokobanLevel(rand, boxes) {
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const rows = generateSokoban(rand, { w: 11, h: 9, boxes, pulls: 22 + attempt * 6 });
+    if (rows) return rows;
+  }
+  return [
+    '##########',
+    '#........#',
+    '#..T.....#',
+    '#..B.....#',
+    '#...P....#',
+    '#........#',
+    '##########',
+  ];
+}
+
 // --- config synthesis -------------------------------------------------------
 
 function buildConfig(templateId, prompt, seedNum) {
@@ -300,7 +336,10 @@ function buildConfig(templateId, prompt, seedNum) {
   const wantsHard = /hard|brutal|tough|difficult|fast|frantic|impossible/i.test(prompt);
   const wantsEasy = /easy|gentle|chill|relaxing|kid|casual|simple/i.test(prompt);
   const diff = wantsHard ? 1.25 : wantsEasy ? 0.78 : 1;
-  const items = noun(prompt, templateId === 'platformer-classic' ? 'coins' : 'loot');
+  const items = noun(
+    prompt,
+    { 'platformer-classic': 'coins', 'endless-runner': 'coins', 'puzzle-sokoban': 'crates' }[templateId] ?? 'loot'
+  );
 
   const cfg = { ...base, seed: seedNum % 999999, style: pickStyle(prompt) };
 
@@ -383,6 +422,47 @@ function buildConfig(templateId, prompt, seedNum) {
         ...(/homing|seek|track/i.test(prompt) ? ['homing'] : []),
       ].slice(0, 3);
       break;
+
+    case 'endless-runner':
+      cfg.theme = {
+        skyTop: pal.sky[0], skyBottom: pal.sky[1], ground: pal.solid, accent: pal.accent,
+        player: pal.hero, obstacle: pal.foe, pickup: pal.item, hazard: '#ff4d6d',
+        pickupName: items,
+      };
+      cfg.entities = {
+        player: { size: 18, sprite: heroSpec },
+        obstacle: { sprite: { build: 'crystal', features: [], eyes: 'none', pattern: 'none' } },
+        pickup: { size: 11, icon: iconFrom(prompt, 'coin') },
+      };
+      cfg.run = {
+        speed: Math.round(132 * diff), maxSpeed: Math.round(260 * diff), ramp: 0.5 * diff,
+        gravity: 1500, jumpPower: 470, gapSeconds: 1.15 / diff, pickupChance: 0.55,
+      };
+      cfg.rules = {
+        win: /endless|forever|high score|survive/i.test(prompt) ? 'endless' : 'distance',
+        targetDistance: 600, lives: wantsHard ? 2 : 3, pickupScore: 10, smashScore: 25,
+      };
+      cfg.mechanicHooks = [
+        'doubleJump',
+        ...(/duck|slide|under|crawl/i.test(prompt) ? ['duck'] : []),
+        ...(/dash|smash|charge|through/i.test(prompt) ? ['dash'] : []),
+        ...(/magnet|vacuum/i.test(prompt) ? ['magnet'] : []),
+      ].slice(0, 3);
+      break;
+
+    case 'puzzle-sokoban': {
+      const crates = wantsHard ? 4 : 3;
+      cfg.theme = {
+        floor: mix(pal.sky[1], pal.solid, 0.3), wall: pal.solid, box: pal.foe,
+        target: '#7ee787', accent: pal.accent, player: pal.hero, stuck: '#ff6b6b',
+        floorPattern: 'checker', boxName: items,
+      };
+      cfg.entities = { player: { size: 16, sprite: heroSpec } };
+      cfg.level = { tileSize: 26, grid: genSokobanLevel(rand, crates) };
+      cfg.rules = { moveLimit: 0, repeatDelay: 0.16, animSpeed: 18 };
+      cfg.mechanicHooks = ['undo', ...(wantsEasy ? ['deadlockWarning'] : [])];
+      break;
+    }
 
     case 'breakout-clone':
       cfg.theme = { background: pal.sky[1], paddle: pal.hero, ball: '#ffffff', brickTop: pal.foe, brickBottom: pal.item, accent: pal.accent };

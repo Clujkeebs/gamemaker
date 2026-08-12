@@ -5,7 +5,7 @@
 // together would mean sending every schema on every request, which costs
 // context and measurably hurts accuracy on the template that actually matters.
 
-import { complete, extractJson, hasKey, ModelError, MODEL } from './anthropic.js';
+import { complete, extractJson, anyConfigured, ModelError, resolveProvider, PROVIDERS } from './llm.js';
 import { catalog, schemaBrief, exampleConfig, get, ids } from './registry.js';
 import { validate, defaultsFor } from '../shared/schema.js';
 import { checkLevel, repairLevel } from '../shared/levelcheck.js';
@@ -82,12 +82,13 @@ fundamentally different core verb), reply instead with ONLY:
 
 Otherwise also include: "changelog_note": "<one sentence on what changed>"`;
 
-async function classify(prompt) {
-  const text = await complete({
+async function classify(prompt, tier) {
+  const { text } = await complete({
     system: classifierSystem(),
     messages: [{ role: 'user', content: prompt }],
     maxTokens: 300,
     temperature: 0.2,
+    tier,
   });
   const json = extractJson(text);
   if (!json?.template_id || !get(json.template_id)) {
@@ -104,9 +105,9 @@ async function classify(prompt) {
  * we fall back. One retry: two costs latency the preview loop can't afford, and
  * a model that fails twice on a schema this explicit will fail a third time.
  */
-async function configureWithRepair({ system, messages, templateId }) {
+async function configureWithRepair({ system, messages, templateId, tier }) {
   const schema = get(templateId).schema;
-  let text = await complete({ system, messages, maxTokens: 6000, temperature: 0.85 });
+  let { text, provider, model } = await complete({ system, messages, maxTokens: 6000, temperature: 0.85, tier });
   let json = extractJson(text);
 
   if (json?.template_switch_required) return { switchRequired: json };
@@ -117,7 +118,7 @@ async function configureWithRepair({ system, messages, templateId }) {
     const problems = result
       ? result.summary().filter((s) => s.startsWith('error')).slice(0, 12)
       : ['response was not valid JSON with a "config" key'];
-    text = await complete({
+    ({ text } = await complete({
       system,
       messages: [
         ...messages,
@@ -129,7 +130,8 @@ async function configureWithRepair({ system, messages, templateId }) {
       ],
       maxTokens: 6000,
       temperature: 0.4,
-    });
+      tier,
+    }));
     const retry = extractJson(text);
     if (retry?.template_switch_required) return { switchRequired: retry };
     if (retry?.config) {
@@ -143,10 +145,10 @@ async function configureWithRepair({ system, messages, templateId }) {
   }
 
   if (!result) return { failed: true };
-  return { json, result };
+  return { json, result, provider, model };
 }
 
-function finish(templateId, json, result, extra = {}) {
+function finish(templateId, json, result, extra = {}, meta = {}) {
   const schema = get(templateId).schema;
   let config = result.config;
   let repaired = false;
@@ -170,7 +172,8 @@ function finish(templateId, json, result, extra = {}) {
     description: String(json.description ?? schema.blurb).slice(0, 200),
     changelog_note: json.changelog_note ? String(json.changelog_note).slice(0, 200) : undefined,
     source: 'model',
-    model: MODEL,
+    provider: meta.provider ?? null,
+    model: meta.model ?? null,
     notes: {
       clamps: result.clamps,
       fills: result.fills.length,
@@ -182,17 +185,18 @@ function finish(templateId, json, result, extra = {}) {
   };
 }
 
-export async function generate(prompt, forcedTemplate = null) {
-  if (!hasKey()) return generateOffline(prompt, forcedTemplate);
+export async function generate(prompt, forcedTemplate = null, { tier = 'fast' } = {}) {
+  if (!anyConfigured()) return generateOffline(prompt, forcedTemplate);
 
   try {
-    const cls = forcedTemplate ? { template_id: forcedTemplate } : await classify(prompt);
+    const cls = forcedTemplate ? { template_id: forcedTemplate } : await classify(prompt, tier);
     const templateId = cls.template_id;
     const example = exampleConfig(templateId);
 
     const attempt = await configureWithRepair({
       system: configSystem(templateId),
       templateId,
+      tier,
       messages: [
         {
           role: 'user',
@@ -211,7 +215,8 @@ ${JSON.stringify(example, null, 1)}`,
       fallback.notes.degraded = 'the model did not return a usable config; built this one locally';
       return fallback;
     }
-    return finish(templateId, attempt.json, attempt.result, { why: cls.why });
+    return finish(templateId, attempt.json, attempt.result, { why: cls.why },
+                  { provider: attempt.provider, model: attempt.model });
   } catch (err) {
     if (err instanceof ModelError) {
       const fallback = generateOffline(prompt, forcedTemplate);
@@ -222,18 +227,19 @@ ${JSON.stringify(example, null, 1)}`,
   }
 }
 
-export async function edit({ templateId, config, instruction, title }) {
+export async function edit({ templateId, config, instruction, title, tier = 'fast' }) {
   if (!get(templateId)) throw new Error(`unknown template ${templateId}`);
-  if (!hasKey()) {
+  if (!anyConfigured()) {
     return {
       unavailable: true,
-      message: 'Conversational editing needs ANTHROPIC_API_KEY. Without it you can still re-roll from a new prompt.',
+      message: `Conversational editing needs a model key — ${PROVIDERS.groq.envVar} (free) or ${PROVIDERS.anthropic.envVar}. Without one you can still re-roll from a new prompt.`,
     };
   }
 
   const attempt = await configureWithRepair({
     system: editSystem(templateId),
     templateId,
+    tier,
     messages: [
       {
         role: 'user',
@@ -257,7 +263,8 @@ Instruction: ${instruction}`,
   if (attempt.failed || !attempt.result) {
     return { unavailable: true, message: 'The edit did not come back as a usable config. Try rephrasing it.' };
   }
-  return finish(templateId, attempt.json, attempt.result);
+  return finish(templateId, attempt.json, attempt.result, {},
+                { provider: attempt.provider, model: attempt.model });
 }
 
 /** A blank, fully-defaulted config. Used by the UI to show a template cold. */

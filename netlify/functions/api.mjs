@@ -21,12 +21,13 @@ export default async (request) => {
       });
     }
 
+    let raw = '';
     let body = {};
     if (request.method === 'POST') {
-      const text = await request.text();
-      if (text) {
+      raw = await request.text();
+      if (raw) {
         try {
-          body = JSON.parse(text);
+          body = JSON.parse(raw);
         } catch {
           return json(400, { error: 'request body was not valid JSON' });
         }
@@ -38,6 +39,12 @@ export default async (request) => {
       pathname: path,
       searchParams: url.searchParams,
       body,
+      rawBody: raw,
+      headers: Object.fromEntries(request.headers),
+      token: request.headers.get('x-rumpus-token'),
+      // Netlify's own header; request.headers has no peer address.
+      ip: request.headers.get('x-nf-client-connection-ip') ?? request.headers.get('x-forwarded-for'),
+      origin: url.origin,
     });
     return json(out.status, out.body);
   } catch (err) {

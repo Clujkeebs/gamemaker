@@ -8,7 +8,7 @@ import { readFileSync, existsSync, statSync } from 'node:fs';
 import { join, extname, normalize } from 'node:path';
 import { ROOT, catalog } from './registry.js';
 import { handleApi, serveBundleFile, mimeFor } from './api.js';
-import { hasKey, MODEL } from './anthropic.js';
+import { anyConfigured, resolveProvider, PROVIDERS } from './llm.js';
 import { backendName } from './storage.js';
 import { hasToken } from './netlify.js';
 
@@ -50,7 +50,9 @@ function safeJoin(root, urlPath) {
   return abs.startsWith(root) ? abs : null;
 }
 
-async function readBody(req, limit = 2_000_000) {
+// The raw text, not the parsed object: Stripe's webhook signature is computed
+// over the exact bytes, so re-serialising the parsed body would never match.
+async function readRaw(req, limit = 2_000_000) {
   const chunks = [];
   let size = 0;
   for await (const chunk of req) {
@@ -58,12 +60,7 @@ async function readBody(req, limit = 2_000_000) {
     if (size > limit) throw new Error('request body too large');
     chunks.push(chunk);
   }
-  if (!chunks.length) return {};
-  try {
-    return JSON.parse(Buffer.concat(chunks).toString('utf8'));
-  } catch {
-    throw new Error('request body was not valid JSON');
-  }
+  return Buffer.concat(chunks).toString('utf8');
 }
 
 const server = createServer(async (req, res) => {
@@ -72,12 +69,25 @@ const server = createServer(async (req, res) => {
 
   try {
     if (path.startsWith('/api/')) {
-      const body = req.method === 'POST' ? await readBody(req) : {};
+      const raw = req.method === 'POST' ? await readRaw(req) : '';
+      let body = {};
+      if (raw) {
+        try {
+          body = JSON.parse(raw);
+        } catch {
+          return json(res, 400, { error: 'request body was not valid JSON' });
+        }
+      }
       const out = await handleApi({
         method: req.method,
         pathname: path,
         searchParams: url.searchParams,
         body,
+        rawBody: raw,
+        headers: req.headers,
+        token: req.headers['x-rumpus-token'] ?? null,
+        ip: req.socket.remoteAddress ?? null,
+        origin: `http://${req.headers.host ?? `localhost:${PORT}`}`,
       });
       return json(res, out.status, out.body);
     }
@@ -110,7 +120,10 @@ const server = createServer(async (req, res) => {
 });
 
 server.listen(PORT, () => {
-  const mode = hasKey() ? `AI on (${MODEL})` : 'AI off — offline generator';
+  const provider = resolveProvider('fast');
+  const mode = anyConfigured()
+    ? `${PROVIDERS[provider].label} (${PROVIDERS[provider].defaultModel})`
+    : 'no model key — offline generator';
   const deploy = hasToken() ? 'Netlify deploy ready' : 'local publish only';
   console.log(`\n  Rumpus running at http://localhost:${PORT}`);
   console.log(`  ${catalog().length} templates · ${mode} · ${deploy} · store: ${backendName()}\n`);

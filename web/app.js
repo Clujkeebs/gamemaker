@@ -19,7 +19,18 @@ const el = {
   pgBg: $('pgBg'), pgStyle: $('pgStyle'), pgLayout: $('pgLayout'),
   styleSelect: $('styleSelect'),
   domain: $('domain'), dnsShow: $('dnsShow'), dnsVerify: $('dnsVerify'), dnsOut: $('dnsOut'),
+  creditsPill: $('creditsPill'), creditsCount: $('creditsCount'), creditsPanel: $('creditsPanel'),
+  freeCount: $('freeCount'), paidCount: $('paidCount'),
+  promoCode: $('promoCode'), promoApply: $('promoApply'), promoMsg: $('promoMsg'),
+  buyBlock: $('buyBlock'), packs: $('packs'), payNote: $('payNote'),
+  tierRow: $('tierRow'), tierFastLabel: $('tierFastLabel'), tierBestLabel: $('tierBestLabel'),
 };
+
+// The visitor's credit token. A convenience, not a login: it identifies a
+// browser so a balance can follow it, and clearing storage starts over.
+const TOKEN_KEY = 'rumpus.token';
+const getToken = () => { try { return localStorage.getItem(TOKEN_KEY); } catch { return null; } };
+const setToken = (t) => { try { if (t) localStorage.setItem(TOKEN_KEY, t); } catch { /* private mode */ } };
 
 const state = {
   game: null,
@@ -30,6 +41,8 @@ const state = {
   frameReady: false,
   busy: false,
   health: null,
+  account: null,
+  tier: 'fast',
 };
 
 const STARTERS = [
@@ -45,14 +58,88 @@ const EDIT_IDEAS = ['make it harder', 'now it\'s underwater', 'give them a doubl
 // ── plumbing ────────────────────────────────────────────────────────────────
 
 async function api(path, body) {
+  const token = getToken();
+  const headers = {};
+  if (body) headers['content-type'] = 'application/json';
+  if (token) headers['x-rumpus-token'] = token;
+
   const res = await fetch(path, {
     method: body ? 'POST' : 'GET',
-    headers: body ? { 'content-type': 'application/json' } : undefined,
+    headers,
     body: body ? JSON.stringify(body) : undefined,
   });
   const data = await res.json().catch(() => ({ error: 'the server sent something that was not JSON' }));
-  if (!res.ok) throw new Error(data.error ?? `request failed (${res.status})`);
+  // Every metered response carries the new balance, so the pill stays honest
+  // without a separate poll.
+  if (data.token) setToken(data.token);
+  if (data.account?.metered) showCredits(data.account);
+  else if (typeof data.free === 'number') showCredits(data);
+  if (!res.ok) {
+    const err = new Error(data.error ?? `request failed (${res.status})`);
+    err.data = data;
+    err.status = res.status;
+    throw err;
+  }
   return data;
+}
+
+// ── credits ─────────────────────────────────────────────────────────────────
+
+function showCredits(account) {
+  if (!account || account.metered === false) return;
+  state.account = { ...state.account, ...account };
+  const { free = 0, paid = 0 } = state.account;
+  const total = free + paid;
+  el.creditsPill.hidden = false;
+  el.creditsPanel.hidden = false;
+  el.creditsCount.textContent = total;
+  el.creditsPill.classList.toggle('low', total > 0 && total <= 2);
+  el.creditsPill.classList.toggle('empty', total === 0);
+  el.freeCount.textContent = free;
+  el.paidCount.textContent = paid;
+  // "Best" spends paid credits only — say so by disabling it rather than
+  // letting someone pick it and get a 402.
+  const bestRadio = document.querySelector('input[name=tier][value=best]');
+  if (bestRadio) {
+    const affordable = paid >= (state.account.cost?.best ?? 2);
+    bestRadio.disabled = !affordable;
+    bestRadio.closest('.tier').classList.toggle('disabled', !affordable);
+    if (!affordable && state.tier === 'best') {
+      document.querySelector('input[name=tier][value=fast]').checked = true;
+      state.tier = 'fast';
+    }
+  }
+}
+
+async function applyPromo() {
+  const code = el.promoCode.value.trim();
+  if (!code) return;
+  el.promoApply.disabled = true;
+  try {
+    const out = await api('/api/promo', { code });
+    el.promoMsg.hidden = false;
+    el.promoMsg.style.color = 'var(--good)';
+    el.promoMsg.textContent = out.capped
+      ? `+${out.granted} credits (capped at the ${out.maxFree} free maximum).`
+      : `+${out.granted} credits. Have fun.`;
+    el.promoCode.value = '';
+    log('rumpus', `Code accepted — ${out.granted} credits added.`, 'ok');
+  } catch (err) {
+    el.promoMsg.hidden = false;
+    el.promoMsg.style.color = 'var(--bad)';
+    el.promoMsg.textContent = err.message;
+  } finally {
+    el.promoApply.disabled = false;
+  }
+}
+
+async function buy(pack) {
+  try {
+    const out = await api('/api/checkout', { pack });
+    location.href = out.url;
+  } catch (err) {
+    log('rumpus', `Checkout failed. ${err.message}`, 'bad');
+  }
 }
 
 function log(who, text, kind = '', actions = []) {
@@ -188,11 +275,12 @@ async function make(prompt) {
   log('you', text, 'you');
   busy(true, 'making a game…');
   try {
-    const game = await api('/api/generate', { prompt: text });
+    const game = await api('/api/generate', { prompt: text, tier: state.tier });
     showGame(game);
     log('rumpus', `${game.title} — ${game.template_id}`, 'ok');
   } catch (err) {
-    log('rumpus', `That one broke. ${err.message}`, 'bad');
+    if (err.data?.outOfCredits) log('rumpus', err.message, 'warn');
+    else log('rumpus', `That one broke. ${err.message}`, 'bad');
   } finally {
     busy(false);
   }
@@ -210,6 +298,7 @@ async function applyEdit() {
       config: state.game.config,
       instruction,
       title: state.game.title,
+      tier: state.tier,
     });
 
     if (result.template_switch_required) {
@@ -231,7 +320,8 @@ async function applyEdit() {
     showGame({ ...result, title: result.title || state.game.title });
     log('rumpus', result.changelog_note ?? 'Changed.', 'ok');
   } catch (err) {
-    log('rumpus', `That edit broke. ${err.message}`, 'bad');
+    if (err.data?.outOfCredits) log('rumpus', err.message, 'warn');
+    else log('rumpus', `That edit broke. ${err.message}`, 'bad');
   } finally {
     busy(false);
   }
@@ -243,6 +333,7 @@ async function rebuildAs(templateId, extra) {
     const game = await api('/api/generate', {
       prompt: `${state.lastPrompt}. ${extra}`,
       template: templateId,
+      tier: state.tier,
     });
     showGame(game);
     log('rumpus', `Rebuilt on ${templateId}. The old config is gone.`, 'ok');
@@ -382,6 +473,12 @@ el.pgStyle.onchange = () => {
   el.styleSelect.value = el.pgStyle.value;
   el.styleSelect.onchange();
 };
+el.promoApply.onclick = applyPromo;
+el.promoCode.addEventListener('keydown', (e) => { if (e.key === 'Enter') applyPromo(); });
+el.creditsPill.onclick = () => el.creditsPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+for (const radio of document.querySelectorAll('input[name=tier]')) {
+  radio.addEventListener('change', () => { if (radio.checked) state.tier = radio.value; });
+}
 el.dnsShow.onclick = dnsShow;
 el.dnsVerify.onclick = dnsVerify;
 
@@ -412,12 +509,58 @@ for (const [target, list, run] of [
   try {
     const health = await api('/api/health');
     state.health = health;
+
+    const fastProvider = health.tiers?.fast?.provider;
+    const bestProvider = health.tiers?.best?.provider;
+    const label = (id) => health.providers?.find((p) => p.id === id)?.label ?? 'offline';
+
     el.status.innerHTML =
-      `<span class="dot ${health.ai ? 'on' : 'off'}"></span>${health.ai ? health.model : 'offline generator'}` +
+      `<span class="dot ${health.ai ? 'on' : 'off'}"></span>${health.ai ? label(fastProvider) : 'offline generator'}` +
       ` <span class="dot ${health.netlify ? 'on' : 'off'}"></span>${health.netlify ? 'netlify' : 'local publish'}` +
       ` <span class="muted">· ${health.templates} templates</span>`;
-    if (!health.ai) {
-      log('rumpus', 'No ANTHROPIC_API_KEY, so this is running the offline generator: keyword matching and locally generated levels. It works — it is just dumber, and conversational editing is off.', 'warn');
+
+    if (health.ai) {
+      // Only offer the tier switch when the two tiers would actually differ.
+      if (fastProvider && bestProvider && fastProvider !== bestProvider) {
+        el.tierRow.hidden = false;
+        el.tierFastLabel.textContent = `Fast · ${label(fastProvider)}`;
+        el.tierBestLabel.textContent = `Best · ${label(bestProvider)}`;
+      }
+      const account = await api('/api/account');
+      showCredits(account);
+      if (account.created) {
+        log('rumpus', account.overCap
+          ? `Lots of new sessions from your network today, so no free credits this time — a code still works.`
+          : `${account.free} free credits to start. They run on ${label(fastProvider)}.`, account.overCap ? 'warn' : 'ok');
+      }
+
+      if (health.payments) {
+        el.buyBlock.hidden = false;
+        el.packs.innerHTML = '';
+        for (const pack of health.packs ?? []) {
+          const b = document.createElement('button');
+          b.className = 'btn small';
+          b.textContent = `${pack.credits} for ${pack.price}`;
+          b.title = pack.badge ?? '';
+          b.onclick = () => buy(pack.id);
+          el.packs.appendChild(b);
+        }
+        el.payNote.textContent = health.paymentsTestMode
+          ? 'Stripe is in test mode — use card 4242 4242 4242 4242.'
+          : 'Credits never expire.';
+      }
+    } else {
+      log('rumpus', 'No model key set, so this is the offline generator: keyword matching and locally generated levels. It works — it is just dumber, conversational editing is off, and it is free and unmetered.', 'warn');
+    }
+
+    // Coming back from a successful checkout: the webhook may land a moment
+    // later, so re-read the balance shortly after rather than only once.
+    if (new URLSearchParams(location.search).get('paid') === '1') {
+      log('rumpus', 'Payment received — topping up.', 'ok');
+      history.replaceState({}, '', location.pathname);
+      for (const delay of [500, 2000, 5000]) {
+        setTimeout(() => api('/api/account').then(showCredits).catch(() => {}), delay);
+      }
     }
   } catch {
     el.status.textContent = 'server unreachable';

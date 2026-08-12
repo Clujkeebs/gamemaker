@@ -17,7 +17,7 @@ you change it by talking to it, and publishes it to a link you can share.
 
 ```bash
 npm start          # http://localhost:4173
-npm test           # 72 tests, no network needed
+npm test           # 94 tests, no network needed
 ```
 
 No install step. No build step. No dependencies — Node 20+ and nothing else.
@@ -28,12 +28,65 @@ path is obviously dumber than the model, and the UI says so rather than
 pretending otherwise. Add a key to get the real thing:
 
 ```bash
-ANTHROPIC_API_KEY=sk-...     # conversational editing + real generation
+GROQ_API_KEY=gsk_...         # free tier, no card — the cheap path
+ANTHROPIC_API_KEY=sk-ant-... # better results — the paid path
 NETLIFY_AUTH_TOKEN=...       # publish to a real URL instead of serving locally
+STRIPE_SECRET_KEY=sk_...     # sell credit packs
 RUMPUS_ROOT_DOMAIN=rumpus.gg # wildcard subdomain per game
-RUMPUS_MODEL=claude-sonnet-5 # default; the preview loop wants latency
-ANTHROPIC_BASE_URL=...       # optional: gateway, proxy, or the test mock
 ```
+
+See `.env.example` for the full list.
+
+## Models and credits
+
+Two providers, and which one runs is a **tier** rather than a hard-coded choice:
+
+| Tier | Provider | Paid for with | Cost |
+|---|---|---|---|
+| **Fast** | Groq — free tier, no card | free + promo credits | 1 credit |
+| **Best** | Claude | paid credits only | 2 credits |
+
+That split is the design, not a policy someone has to remember: **free and promo
+credits are structurally incapable of buying the expensive model.** Hand out
+launch codes without watching a bill.
+
+Either provider alone is enough — a deployment with only one key still works,
+and the tier switch only appears when the two tiers would actually differ. With
+no key at all nothing is metered, because the offline generator is local and
+charging for it would be a lie.
+
+### Promo codes
+
+`PRODUCTHUNT` and `SHIPATHON` grant 20 credits each, capped at 750 redemptions,
+one per visitor. `RUMPUS` grants 10. Add more without a code change:
+
+```bash
+RUMPUS_PROMOS='LAUNCHDAY:20:500:2026-12-31,FRIENDS:50:25'
+#              code : credits : maxRedemptions : expires
+```
+
+### Payments
+
+Stripe Checkout, no SDK and nothing to set up in the dashboard — prices are sent
+inline as `price_data`. Packs are 100 credits for $5 and 500 for $20. The
+webhook grants credits only on a valid signature, is replay-protected, and
+ignores a retried event it has already honoured.
+
+**Point Stripe's webhook at `/api/stripe-webhook`** and set
+`STRIPE_WEBHOOK_SECRET`. Without that secret the endpoint refuses everything,
+so a misconfigured deployment grants nothing rather than granting freely.
+
+Two honest caveats:
+
+- **Identity is a token in localStorage, not a login.** It follows a browser so
+  a balance can persist; clearing storage starts over with a fresh allowance.
+  That's an accepted trade for letting people try a toy without signing up. The
+  per-IP cap is a speed bump, not a wall — the real backstop is that free
+  credits only ever spend on the cheap provider.
+- **Promo redemption counters are read-modify-write**, so two people claiming
+  the last slot at the same instant can both get it. Overshooting a launch code
+  by one or two is a non-event; a distributed lock per redeem would not be worth
+  it.
 
 ## How it works
 
@@ -126,7 +179,7 @@ templates/    one directory per archetype: engine.js + schema.json + examples/
 arcade/       the landing-page template and its own config schema
 server/       zero-dep HTTP server, generation pipeline, bundler, deploy, DNS
 web/          the editor, plus /styles.html — the sprite and style gallery
-test/         72 tests, including a mock Claude endpoint and a function harness
+test/         94 tests, incl. mocked model, Stripe and function harnesses
 ```
 
 ## Deploying
@@ -150,7 +203,9 @@ Set these in **Site configuration → Environment variables**:
 
 | Variable | Effect if unset |
 |---|---|
-| `ANTHROPIC_API_KEY` | Site still works, on the offline generator. No AI generation or conversational editing. |
+| `GROQ_API_KEY` | No free tier. Set this first — it's free and it's what promo credits spend on. |
+| `ANTHROPIC_API_KEY` | No "Best" tier; everything runs on Groq. With neither, the site falls back to the offline generator. |
+| `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` | No credit packs; free and promo credits only. |
 | `NETLIFY_AUTH_TOKEN` | Published games are served from the app at `/p/<slug>/` instead of getting their own Netlify site. |
 | `RUMPUS_ROOT_DOMAIN` | No per-game subdomains. |
 

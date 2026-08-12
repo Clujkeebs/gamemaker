@@ -9,7 +9,10 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ROOT, catalog, get } from './registry.js';
 import { generate, edit, blank } from './generate.js';
-import { hasKey, MODEL } from './anthropic.js';
+import { anyConfigured, providerStatus, resolveProvider, PROVIDERS } from './llm.js';
+import * as credits from './credits.js';
+import * as payments from './payments.js';
+import { allPromos } from './promos.js';
 import { validate, defaultsFor } from '../shared/schema.js';
 import { checkLevel } from '../shared/levelcheck.js';
 import { buildBundle, bundleFiles } from './bundle.js';
@@ -32,20 +35,32 @@ const MIME = {
 export const mimeFor = (path) => MIME[path.split('.').pop()?.toLowerCase()] ?? 'application/octet-stream';
 
 const ok = (body) => ({ status: 200, body });
-const bad = (status, error) => ({ status, body: { error } });
+const bad = (status, error, extra = {}) => ({ status, body: { error, ...extra } });
+
+const TIERS = new Set(['fast', 'best']);
+const pickTier = (raw) => (TIERS.has(raw) ? raw : 'fast');
 
 /**
  * @param req { method, pathname, searchParams, body }
  * @returns { status, body }  — body is JSON-serialisable
  */
 export async function handleApi(req) {
-  const { method, pathname, searchParams = new URLSearchParams(), body = {} } = req;
+  const {
+    method, pathname, searchParams = new URLSearchParams(), body = {},
+    token = null, ip = null, origin = '', rawBody = '', headers = {},
+  } = req;
 
   if (pathname === '/api/health') {
+    const status = providerStatus();
     return ok({
       ok: true,
-      model: hasKey() ? MODEL : null,
-      ai: hasKey(),
+      ai: anyConfigured(),
+      ...status,
+      model: anyConfigured() ? PROVIDERS[resolveProvider('fast')].defaultModel : null,
+      payments: payments.hasStripe(),
+      paymentsTestMode: payments.hasStripe() ? payments.isTestMode() : null,
+      packs: payments.packList(),
+      freeOnArrival: credits.FREE_ON_ARRIVAL,
       netlify: netlify.hasToken(),
       storage: storage.backendName(),
       rootDomain: process.env.RUMPUS_ROOT_DOMAIN ?? null,
@@ -53,7 +68,65 @@ export async function handleApi(req) {
     });
   }
 
-  if (pathname === '/api/templates') return ok({ templates: catalog(), ai: hasKey() });
+  if (pathname === '/api/templates') return ok({ templates: catalog(), ai: anyConfigured() });
+
+  // ── credits ───────────────────────────────────────────────────────────────
+
+  if (pathname === '/api/account') {
+    // Generation is free and local when no provider is configured, so don't
+    // mint accounts or spend anything nobody needs.
+    if (!anyConfigured()) return ok({ metered: false, reason: 'offline generator' });
+    const { account, created, overCap } = await credits.ensureAccount(token, { ip });
+    return ok({ metered: true, created, overCap: Boolean(overCap), ...credits.publicView(account) });
+  }
+
+  if (pathname === '/api/promo' && method === 'POST') {
+    if (!anyConfigured()) return bad(400, 'Nothing to spend credits on — this deployment runs the offline generator.');
+    const { account } = await credits.ensureAccount(token, { ip });
+    const result = await credits.redeem(account, body.code);
+    if (!result.ok) return bad(400, result.error, { ...credits.publicView(account) });
+    return ok({
+      granted: result.granted,
+      capped: result.capped,
+      note: result.note,
+      ...credits.publicView(result.account),
+    });
+  }
+
+  if (pathname === '/api/checkout' && method === 'POST') {
+    if (!payments.hasStripe()) return bad(503, 'Payments are not configured on this deployment.');
+    const { account } = await credits.ensureAccount(token, { ip });
+    try {
+      const session = await payments.createCheckout({
+        pack: body.pack,
+        token: account.token,
+        origin: origin || 'http://localhost:4173',
+      });
+      return ok({ url: session.url, token: account.token });
+    } catch (err) {
+      return bad(400, String(err.message ?? err));
+    }
+  }
+
+  // Stripe posts here. The signature is the only thing making this safe, so a
+  // deployment without the secret refuses rather than trusting the body.
+  if (pathname === '/api/stripe-webhook' && method === 'POST') {
+    const sig = headers['stripe-signature'] ?? headers['Stripe-Signature'];
+    const verified = payments.verifyWebhook(rawBody, sig);
+    if (!verified.ok) return bad(400, verified.error);
+
+    const grant = payments.creditsFromEvent(verified.event);
+    if (!grant) return ok({ ignored: true });
+
+    const account = await credits.getAccount(grant.token);
+    if (!account) return ok({ ignored: true, reason: 'unknown token' });
+    // Stripe retries webhooks; granting twice for one payment would be a gift.
+    if ((account.purchases ?? []).some((p) => p.reason === grant.sessionId)) {
+      return ok({ duplicate: true });
+    }
+    await credits.grantPaid(account, grant.credits, grant.sessionId);
+    return ok({ granted: grant.credits });
+  }
 
   if (pathname === '/api/template') {
     const t = get(searchParams.get('id'));
@@ -66,19 +139,27 @@ export async function handleApi(req) {
     const prompt = String(body.prompt ?? '').trim();
     if (!prompt) return bad(400, 'Say what kind of game you want.');
     if (prompt.length > 2000) return bad(400, 'That idea is too long — trim it to a couple of sentences.');
-    return ok(await generate(prompt, body.template ?? null));
+
+    const charge = await beginCharge({ token, ip, tier: body.tier });
+    if (charge.error) return charge.error;
+    const game = await generate(prompt, body.template ?? null, { tier: charge.tier });
+    return ok({ ...game, account: await settle(charge, game) });
   }
 
   if (pathname === '/api/edit' && method === 'POST') {
     if (!body.templateId || !body.config || !body.instruction) {
       return bad(400, 'edit needs templateId, config and instruction');
     }
-    return ok(await edit({
+    const charge = await beginCharge({ token, ip, tier: body.tier });
+    if (charge.error) return charge.error;
+    const result = await edit({
       templateId: body.templateId,
       config: body.config,
       instruction: String(body.instruction).slice(0, 1000),
       title: body.title,
-    }));
+      tier: charge.tier,
+    });
+    return ok({ ...result, account: await settle(charge, result) });
   }
 
   // Re-validate a config the client changed directly (the form UI path).
@@ -187,6 +268,48 @@ export async function handleApi(req) {
   }
 
   return bad(404, 'no such endpoint');
+}
+
+/**
+ * Take payment before calling a model, since that's the only way to stop a
+ * request that's already in flight.
+ */
+async function beginCharge({ token, ip, tier: rawTier }) {
+  const tier = pickTier(rawTier);
+  // Nothing to meter when there's no provider: the offline generator is local
+  // and free, and charging for it would be a lie.
+  if (!anyConfigured()) return { metered: false, tier };
+
+  const { account } = await credits.ensureAccount(token, { ip });
+  const plan = credits.affords(account, tier);
+  if (!plan.ok) {
+    const needsPaid = tier === 'best' && account.free > 0;
+    return {
+      error: {
+        status: 402,
+        body: {
+          error: needsPaid
+            ? 'Best-quality runs need paid credits. Free and promo credits cover the fast model.'
+            : "You're out of credits. Redeem a code or grab a pack to keep going.",
+          outOfCredits: true,
+          needsPaid,
+          ...credits.publicView(account),
+        },
+      },
+    };
+  }
+  const spent = await credits.spend(account, tier);
+  return { metered: true, tier, account: spent.account, from: spent.from, cost: spent.cost };
+}
+
+/** Refund anything the model failed to deliver, and report the new balance. */
+async function settle(charge, result) {
+  if (!charge.metered) return { metered: false };
+  const producedNothing = result?.unavailable || (result?.source === 'offline' && result?.notes?.degraded);
+  if (producedNothing) {
+    await credits.refund(charge.account, charge.from, charge.cost);
+  }
+  return { metered: true, refunded: Boolean(producedNothing), ...credits.publicView(charge.account) };
 }
 
 /** Serve one file out of a published bundle. */

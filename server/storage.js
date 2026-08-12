@@ -61,6 +61,36 @@ export async function writeIndex(db) {
   writeFileSync(join(DATA_DIR, 'games.json'), JSON.stringify(db, null, 2));
 }
 
+// ── small JSON documents (credit ledgers, promo counters) ───────────────────
+//
+// One key per record rather than one big document, so two visitors spending
+// credits at the same time can't clobber each other's balance.
+
+export async function readDoc(key) {
+  if (onNetlify()) {
+    const store = await blobs();
+    return (await store.get(`doc/${key}.json`, { type: 'json' })) ?? null;
+  }
+  const file = join(DATA_DIR, `${key}.json`);
+  if (!existsSync(file)) return null;
+  try {
+    return JSON.parse(readFileSync(file, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+export async function writeDoc(key, value) {
+  if (onNetlify()) {
+    const store = await blobs();
+    await store.setJSON(`doc/${key}.json`, value);
+    return;
+  }
+  const file = join(DATA_DIR, `${key}.json`);
+  mkdirSync(dirname(file), { recursive: true });
+  writeFileSync(file, JSON.stringify(value, null, 2));
+}
+
 // ── published bundles ───────────────────────────────────────────────────────
 
 /** @param files { "index.html": "…", "shared/draw.js": "…" } */

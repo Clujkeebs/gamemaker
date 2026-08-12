@@ -7,7 +7,7 @@ import { templates, ROOT, catalog, schemaBrief, exampleConfig } from '../server/
 import { validate, defaultsFor } from '../shared/schema.js';
 import { checkLevel, repairLevel, searchOpts } from '../shared/levelcheck.js';
 import { checkReachable } from '../shared/reachability.js';
-import { extractJson } from '../server/anthropic.js';
+import { extractJson } from '../server/llm.js';
 import { slugify } from '../server/store.js';
 import { buildBundle } from '../server/bundle.js';
 import { defaultPage, renderArcadePage, renderGamePage } from '../arcade/render.js';

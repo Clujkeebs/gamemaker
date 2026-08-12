@@ -17,6 +17,9 @@
     <span class="tag">describe a game · play it · ship it</span>
   </div>
   <div class="status" id="status" role="status"></div>
+  <button class="credits-pill" id="creditsPill" hidden title="Credits left">
+    <span id="creditsCount">–</span> credits
+  </button>
   <a class="gallery-link" href="/styles.html" target="_blank" rel="noopener" title="Every sprite part and style">art</a>
 </header>
 
@@ -31,6 +34,14 @@
       <div class="row">
         <button class="btn primary" id="make">Make a rumpus</button>
         <button class="btn ghost" id="reroll" disabled title="Same idea, new roll">Re-roll</button>
+      </div>
+      <div class="row tier-row" id="tierRow" hidden>
+        <label class="tier" title="Cheap, quick, free credits">
+          <input type="radio" name="tier" value="fast" checked> <span id="tierFastLabel">Fast</span>
+        </label>
+        <label class="tier" title="Better results, costs paid credits">
+          <input type="radio" name="tier" value="best"> <span id="tierBestLabel">Best</span>
+        </label>
       </div>
       <div class="chips" id="starters"></div>
     </div>
@@ -92,6 +103,27 @@
 
   <!-- ─────────── right: ship it ─────────── -->
   <section class="panel ship" id="shipPanel">
+    <div id="creditsPanel" hidden>
+      <h2 class="section-title">Credits</h2>
+      <div class="credit-bars">
+        <div class="credit-bar"><span class="k">free</span><b id="freeCount">0</b><span class="muted tiny">fast model</span></div>
+        <div class="credit-bar"><span class="k">paid</span><b id="paidCount">0</b><span class="muted tiny">any model</span></div>
+      </div>
+      <div class="field">
+        <label for="promoCode">Got a code?</label>
+        <div class="row tight">
+          <input id="promoCode" type="text" placeholder="PRODUCTHUNT" spellcheck="false" autocapitalize="characters">
+          <button class="btn small" id="promoApply">Apply</button>
+        </div>
+      </div>
+      <p id="promoMsg" class="tiny" hidden></p>
+      <div id="buyBlock" hidden>
+        <div class="row tight" id="packs"></div>
+        <p class="muted tiny" id="payNote"></p>
+      </div>
+      <div class="divider"></div>
+    </div>
+
     <h2 class="section-title">Published</h2>
     <div class="published empty" id="published">
       <p class="muted">Nothing shipped yet. Publishing gives you a link that works on anyone's phone.</p>

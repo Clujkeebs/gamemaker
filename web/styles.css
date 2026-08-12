@@ -56,6 +56,34 @@ body {
   border: 1px solid var(--line); border-radius: 7px; padding: 3px 9px;
 }
 .gallery-link:hover { color: var(--accent); border-color: var(--accent); }
+.credits-pill {
+  font: inherit; font-size: 12px; font-weight: 700; color: var(--accent-ink);
+  background: var(--accent); border: 0; border-radius: 999px;
+  padding: 4px 11px; cursor: pointer; white-space: nowrap;
+}
+.credits-pill.low { background: var(--warn); }
+.credits-pill.empty { background: var(--bad); color: #fff; }
+
+.tier-row { gap: 6px; }
+.tier {
+  flex: 1; display: flex; align-items: center; gap: 6px; cursor: pointer;
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px;
+  padding: 7px 10px; font-size: 12.5px; color: var(--muted);
+}
+.tier:has(input:checked) { border-color: var(--accent); color: var(--text); }
+.tier input { accent-color: var(--accent); margin: 0; }
+.tier.disabled { opacity: 0.45; cursor: not-allowed; }
+
+.credit-bars { display: flex; gap: 8px; margin-bottom: 12px; }
+.credit-bar {
+  flex: 1; background: var(--panel-2); border: 1px solid var(--line);
+  border-radius: 9px; padding: 8px 10px; display: flex; flex-direction: column; gap: 1px;
+}
+.credit-bar .k {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted);
+}
+.credit-bar b { font-size: 19px; line-height: 1.1; }
+#packs { flex-wrap: wrap; margin-bottom: 6px; }
 
 /* ── layout ──────────────────────────────────────────── */
 

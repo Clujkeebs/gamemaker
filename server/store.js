@@ -1,37 +1,21 @@
-// Published-game store. A JSON file, deliberately.
+// Published-game index.
 //
 // The thing that must not break is URL stability: republishing an edited game
 // has to land on the same slug, or every link anyone already shared rots. That
 // requirement is about slug allocation, not about the database — so this stays
-// a file until something actually needs more.
+// a single JSON document, and `storage.js` decides where that document lives.
+//
+// Everything is async because on Netlify the backing store is a network call.
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
-import { ROOT } from './registry.js';
-
-const DATA_DIR = join(ROOT, 'data');
-const DB = join(DATA_DIR, 'games.json');
+import { readIndex, writeIndex } from './storage.js';
 
 // Names that would let a published game impersonate part of the service.
 const RESERVED = new Set([
   'www', 'api', 'app', 'admin', 'mail', 'ftp', 'cdn', 'static', 'assets',
   'docs', 'blog', 'help', 'support', 'status', 'dashboard', 'account',
   'login', 'signup', 'auth', 'billing', 'rumpus', 'play', 'games', 'new',
+  'preview', 'styles', 'index',
 ]);
-
-function load() {
-  if (!existsSync(DB)) return { games: {} };
-  try {
-    return JSON.parse(readFileSync(DB, 'utf8'));
-  } catch {
-    return { games: {} };
-  }
-}
-
-function save(db) {
-  mkdirSync(DATA_DIR, { recursive: true });
-  writeFileSync(DB, JSON.stringify(db, null, 2));
-}
 
 export function slugify(title) {
   const base = String(title || '')
@@ -45,38 +29,35 @@ export function slugify(title) {
 }
 
 /** Allocate a slug, or keep the one this game already owns. */
-export function allocateSlug(title, gameId) {
-  const db = load();
+export async function allocateSlug(title, gameId) {
+  const db = await readIndex();
   const existing = gameId && db.games[gameId];
   if (existing?.slug) return existing.slug;
 
   const base = slugify(title);
   const taken = new Set(Object.values(db.games).map((g) => g.slug));
-  let slug = base;
-  if (RESERVED.has(slug)) slug = `${slug}-game`;
+  let slug = RESERVED.has(base) ? `${base}-game` : base;
   let n = 2;
   while (taken.has(slug)) slug = `${base}-${n++}`;
   return slug;
 }
 
-export function put(game) {
-  const db = load();
+export async function put(game) {
+  const db = await readIndex();
   const now = new Date().toISOString();
   const prev = db.games[game.id];
-  db.games[game.id] = {
-    ...prev,
-    ...game,
-    createdAt: prev?.createdAt ?? now,
-    updatedAt: now,
-  };
-  save(db);
+  db.games[game.id] = { ...prev, ...game, createdAt: prev?.createdAt ?? now, updatedAt: now };
+  await writeIndex(db);
   return db.games[game.id];
 }
 
-export const getGame = (id) => load().games[id] ?? null;
-export const bySlug = (slug) => Object.values(load().games).find((g) => g.slug === slug) ?? null;
-export const list = () =>
-  Object.values(load().games).sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
+export const getGame = async (id) => (await readIndex()).games[id] ?? null;
+
+export const bySlug = async (slug) =>
+  Object.values((await readIndex()).games).find((g) => g.slug === slug) ?? null;
+
+export const list = async () =>
+  Object.values((await readIndex()).games).sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
 
 export const newId = () =>
   `g_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;

@@ -338,15 +338,14 @@ test('slugs are url-safe and stable', () => {
 test('a published bundle is self-contained and keeps the game separate from the page', () => {
   const game = generateOffline('a cat ninja in a bamboo forest');
   const page = defaultPage(game, defaultsFor(arcadeSchema.config));
-  const outDir = join(ROOT, 'dist', '__test__');
-  const { files } = buildBundle({ game, page, outDir });
+  const { files } = buildBundle({ game, page });
 
   for (const expected of ['index.html', 'game.html', `templates/${game.template_id}/engine.js`, 'shared/runtime.js', '_headers']) {
-    assert.ok(files.includes(expected), `bundle is missing ${expected}`);
+    assert.ok(files[expected], `bundle is missing ${expected}`);
   }
 
-  const indexHtml = readFileSync(join(outDir, 'index.html'), 'utf8');
-  const gameHtml = readFileSync(join(outDir, 'game.html'), 'utf8');
+  const indexHtml = files['index.html'];
+  const gameHtml = files['game.html'];
 
   assert.ok(gameHtml.includes('RUMPUS_CONFIG'), 'game.html does not carry its config');
   assert.ok(gameHtml.includes(`templates/${game.template_id}/engine.js`), 'game.html does not load its engine');
@@ -356,9 +355,6 @@ test('a published bundle is self-contained and keeps the game separate from the 
   // the game, because the page contains none of it.
   assert.ok(!indexHtml.includes('RUMPUS_CONFIG'), 'the arcade page leaked the game config');
   assert.ok(indexHtml.includes('game.html'), 'the arcade page does not embed the game');
-
-  rmSync(outDir, { recursive: true, force: true });
-  assert.equal(existsSync(outDir), false);
 });
 
 test('the arcade page escapes user copy', () => {
@@ -549,12 +545,10 @@ test('every generated config produces sprites that compose without error', () =>
 test('published bundles ship the sprite and style modules the engine needs', () => {
   const game = generateOffline('a cat ninja in a bamboo forest');
   const page = defaultPage(game, defaultsFor(arcadeSchema.config));
-  const outDir = join(ROOT, 'dist', '__style_test__');
-  const { files } = buildBundle({ game, page, outDir });
+  const { files } = buildBundle({ game, page });
   for (const needed of ['shared/sprites.js', 'shared/styles.js', 'shared/render.js']) {
-    assert.ok(files.includes(needed), `bundle is missing ${needed} — the published game would not render`);
+    assert.ok(files[needed], `bundle is missing ${needed} — the published game would not render`);
   }
-  rmSync(outDir, { recursive: true, force: true });
 });
 
 // ── sokoban solvability ─────────────────────────────────────────────────────
@@ -648,11 +642,9 @@ test('published push puzzles do not ship the solver', () => {
   const game = generateOffline('a robot pushing crates around a warehouse');
   assert.equal(game.template_id, 'puzzle-sokoban');
   const page = defaultPage(game, defaultsFor(arcadeSchema.config));
-  const outDir = join(ROOT, 'dist', '__soko_test__');
-  const { files } = buildBundle({ game, page, outDir });
-  assert.ok(files.includes('shared/sokoban.js'), 'the engine needs the rules');
-  assert.ok(!files.includes('shared/sokoban-solve.js'), 'the solver leaked into a published bundle');
-  rmSync(outDir, { recursive: true, force: true });
+  const { files } = buildBundle({ game, page });
+  assert.ok(files['shared/sokoban.js'], 'the engine needs the rules');
+  assert.ok(!files['shared/sokoban-solve.js'], 'the solver leaked into a published bundle');
 });
 
 test('the runner declares no level check, because it has no level to check', () => {

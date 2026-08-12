@@ -1,0 +1,44 @@
+# Rumpus on Netlify.
+#
+# The editor and the game engines are static; everything under /api and /p is
+# one Function that calls the same server/api.js the local Node server does.
+
+[build]
+  command = "node scripts/build-netlify.js"
+  publish = "build"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[functions]
+  node_bundler = "esbuild"
+  # The function reads template schemas and example configs off disk at boot,
+  # and the arcade page schema at import time. None of those are reachable by
+  # static analysis, so they have to be named explicitly or the bundle omits them.
+  included_files = [
+    "templates/**/schema.json",
+    "templates/**/examples/*.json",
+    "templates/**/engine.js",
+    "shared/**",
+    "arcade/**"
+  ]
+
+# The preview iframe is sandboxed without allow-same-origin, which gives it an
+# opaque origin — so its ES module fetches are cross-origin and need CORS.
+# Without this the engine silently never loads inside the preview.
+[[headers]]
+  for = "/templates/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Cache-Control = "public, max-age=300"
+
+[[headers]]
+  for = "/shared/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Cache-Control = "public, max-age=300"
+
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"

@@ -116,7 +116,7 @@ function mountPreview(game) {
   // Different engine — reload the frame. Same engine, changed config — hot swap.
   state.frameTemplate = game.template_id;
   state.frameReady = false;
-  el.preview.src = `/preview/${game.template_id}`;
+  el.preview.src = `/preview.html?t=${encodeURIComponent(game.template_id)}`;
 }
 
 // ── rendering the current game ──────────────────────────────────────────────

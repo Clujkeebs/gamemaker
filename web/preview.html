@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>preview</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>%F0%9F%95%B9%EF%B8%8F</text></svg>">
+<style>
+  html,body{margin:0;height:100%;background:#05060a;overflow:hidden}
+  body{display:flex;align-items:center;justify-content:center}
+  canvas{width:100%;height:100%;object-fit:contain;display:block;image-rendering:pixelated;touch-action:none}
+  .err{color:#ff7b72;font:13px/1.5 ui-monospace,Menlo,monospace;padding:16px;text-align:center}
+</style>
+</head>
+<body>
+<canvas id="stage"></canvas>
+<script type="module">
+  // Which engine to load comes from the query string rather than the server
+  // rendering a bespoke page per template — that keeps this a static file the
+  // CDN can serve, with no function in the path.
+  const id = new URLSearchParams(location.search).get('t') ?? '';
+  if (!/^[a-z0-9-]+$/.test(id)) {
+    document.body.innerHTML = '<p class="err">no template requested</p>';
+  } else {
+    import(`/templates/${id}/engine.js`).catch((err) => {
+      document.body.innerHTML = `<p class="err">could not load ${id}<br>${err.message}</p>`;
+      parent !== window && parent.postMessage({ type: 'rumpus:error', message: String(err.message) }, '*');
+    });
+  }
+</script>
+</body>
+</html>

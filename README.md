@@ -17,7 +17,7 @@ you change it by talking to it, and publishes it to a link you can share.
 
 ```bash
 npm start          # http://localhost:4173
-npm test           # 65 tests, no network needed
+npm test           # 72 tests, no network needed
 ```
 
 No install step. No build step. No dependencies — Node 20+ and nothing else.
@@ -126,8 +126,42 @@ templates/    one directory per archetype: engine.js + schema.json + examples/
 arcade/       the landing-page template and its own config schema
 server/       zero-dep HTTP server, generation pipeline, bundler, deploy, DNS
 web/          the editor, plus /styles.html — the sprite and style gallery
-test/         65 tests, including a mock Claude endpoint
+test/         72 tests, including a mock Claude endpoint and a function harness
 ```
+
+## Deploying
+
+Rumpus runs as a Node server locally and as static files + one Netlify Function
+in production. Both call the same `server/api.js`, so they can't drift.
+
+The simplest route is to connect this repo in Netlify's UI — Netlify clones and
+builds it, so nothing needs to be installed locally. Or from a machine with
+network access to Netlify:
+
+```bash
+npm run build            # assembles build/ — the static publish directory
+netlify deploy --prod
+```
+
+`netlify.toml` has it wired: `build/` is published, `netlify/functions/api.mjs`
+claims `/api/*` and `/p/*`.
+
+Set these in **Site configuration → Environment variables**:
+
+| Variable | Effect if unset |
+|---|---|
+| `ANTHROPIC_API_KEY` | Site still works, on the offline generator. No AI generation or conversational editing. |
+| `NETLIFY_AUTH_TOKEN` | Published games are served from the app at `/p/<slug>/` instead of getting their own Netlify site. |
+| `RUMPUS_ROOT_DOMAIN` | No per-game subdomains. |
+
+Two things about the hosted version worth knowing:
+
+- **Published games live in Netlify Blobs**, not on disk. A function's
+  filesystem is scratch space that vanishes with the container, so anything
+  written there would survive until the next cold start.
+- **The store is a single JSON document.** Fine at this size; it would want
+  splitting per-game before it saw real concurrent traffic, since two
+  simultaneous publishes can race on it.
 
 ## Docs
 

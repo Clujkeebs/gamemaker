@@ -10,10 +10,11 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
-    "test": "node --test test/run.js && node --test test/pipeline.js",
+    "test": "node --test test/run.js && node --test test/pipeline.js && node --test test/function.js",
     "test:unit": "node --test test/run.js",
     "test:pipeline": "node --test test/pipeline.js",
-    "build": "node scripts/build-netlify.js"
+    "build": "node scripts/build-netlify.js",
+    "test:function": "node --test test/function.js"
   },
   "dependencies": {
     "@netlify/blobs": "^8.1.0"

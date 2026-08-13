@@ -61,7 +61,7 @@ export function buildBundle({ game, page }) {
       '  Cache-Control: public, max-age=0, must-revalidate',
       '',
     ].join('\n'),
-    'rumpus.json': JSON.stringify({
+    'romp.json': JSON.stringify({
       title: game.title,
       description: game.description,
       template_id: game.template_id,

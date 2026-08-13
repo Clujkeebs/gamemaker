@@ -71,14 +71,14 @@ export async function createCheckout({ pack, token, origin }) {
     // Let Stripe collect a promotion code at checkout too, so a discount can be
     // run without another code path in this app.
     allow_promotion_codes: true,
-    metadata: { rumpus_token: token, credits: chosen.credits, pack: chosen.id },
+    metadata: { romp_token: token, credits: chosen.credits, pack: chosen.id },
     line_items: [{
       quantity: 1,
       price_data: {
         currency: 'usd',
         unit_amount: chosen.cents,
         product_data: {
-          name: `Rumpus — ${chosen.label}`,
+          name: `Romp — ${chosen.label}`,
           description: 'Credits for generating and editing games. They do not expire.',
         },
       },
@@ -129,7 +129,7 @@ export function creditsFromEvent(event) {
   if (event?.type !== 'checkout.session.completed') return null;
   const session = event.data?.object ?? {};
   if (session.payment_status !== 'paid') return null;
-  const token = session.metadata?.rumpus_token ?? session.client_reference_id;
+  const token = session.metadata?.romp_token ?? session.client_reference_id;
   const credits = Number(session.metadata?.credits);
   if (!token || !Number.isFinite(credits) || credits <= 0) return null;
   return { token, credits, sessionId: session.id };

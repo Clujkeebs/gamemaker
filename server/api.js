@@ -9,10 +9,9 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ROOT, catalog, get } from './registry.js';
 import { generate, edit, blank } from './generate.js';
-import { anyConfigured, providerStatus, resolveProvider, PROVIDERS } from './llm.js';
+import { anyConfigured, providerStatus, resolveProvider, effectiveTier, PROVIDERS } from './llm.js';
 import * as credits from './credits.js';
 import * as payments from './payments.js';
-import { allPromos } from './promos.js';
 import { validate, defaultsFor } from '../shared/schema.js';
 import { checkLevel } from '../shared/levelcheck.js';
 import { buildBundle, bundleFiles } from './bundle.js';
@@ -37,8 +36,9 @@ export const mimeFor = (path) => MIME[path.split('.').pop()?.toLowerCase()] ?? '
 const ok = (body) => ({ status: 200, body });
 const bad = (status, error, extra = {}) => ({ status, body: { error, ...extra } });
 
-const TIERS = new Set(['fast', 'best']);
-const pickTier = (raw) => (TIERS.has(raw) ? raw : 'fast');
+// An unknown tier from a client is treated as the cheap one rather than
+// trusted, and "best" is downgraded when it would not actually be better.
+const pickTier = (raw) => effectiveTier(raw);
 
 /**
  * @param req { method, pathname, searchParams, body }
@@ -63,7 +63,7 @@ export async function handleApi(req) {
       freeOnArrival: credits.FREE_ON_ARRIVAL,
       netlify: netlify.hasToken(),
       storage: storage.backendName(),
-      rootDomain: process.env.RUMPUS_ROOT_DOMAIN ?? null,
+      rootDomain: process.env.ROMP_ROOT_DOMAIN ?? null,
       templates: catalog().length,
     });
   }
@@ -142,8 +142,14 @@ export async function handleApi(req) {
 
     const charge = await beginCharge({ token, ip, tier: body.tier });
     if (charge.error) return charge.error;
-    const game = await generate(prompt, body.template ?? null, { tier: charge.tier });
-    return ok({ ...game, account: await settle(charge, game) });
+    try {
+      const game = await generate(prompt, body.template ?? null, { tier: charge.tier });
+      return ok({ ...game, account: await settle(charge, game) });
+    } catch (err) {
+      // Paid for, delivered nothing. Give it back before the error propagates.
+      await refundCharge(charge);
+      throw err;
+    }
   }
 
   if (pathname === '/api/edit' && method === 'POST') {
@@ -152,14 +158,19 @@ export async function handleApi(req) {
     }
     const charge = await beginCharge({ token, ip, tier: body.tier });
     if (charge.error) return charge.error;
-    const result = await edit({
-      templateId: body.templateId,
-      config: body.config,
-      instruction: String(body.instruction).slice(0, 1000),
-      title: body.title,
-      tier: charge.tier,
-    });
-    return ok({ ...result, account: await settle(charge, result) });
+    try {
+      const result = await edit({
+        templateId: body.templateId,
+        config: body.config,
+        instruction: String(body.instruction).slice(0, 1000),
+        title: body.title,
+        tier: charge.tier,
+      });
+      return ok({ ...result, account: await settle(charge, result) });
+    } catch (err) {
+      await refundCharge(charge);
+      throw err;
+    }
   }
 
   // Re-validate a config the client changed directly (the form UI path).
@@ -186,6 +197,10 @@ export async function handleApi(req) {
     // Never publish a config that hasn't been through validation, whatever the
     // client says. The published bundle is the artifact people share.
     game.config = validate(game.config, t.schema).config;
+    // The client echoes back whatever /api/generate returned, which now
+    // includes its own credit balance and token. Nothing downstream should ever
+    // see those, so drop them here rather than trusting every future caller.
+    delete game.account;
 
     const existing = body.id ? await store.getGame(body.id) : null;
     const id = existing ? body.id : store.newId();
@@ -202,7 +217,7 @@ export async function handleApi(req) {
         deployed = await netlify.deploy({
           files: bundleFiles(files),
           siteId: existing?.deploy?.siteId,
-          name: `rumpus-${slug}`,
+          name: `romp-${slug}`,
         });
       } catch (err) {
         deployError = String(err.message ?? err);
@@ -300,6 +315,12 @@ async function beginCharge({ token, ip, tier: rawTier }) {
   }
   const spent = await credits.spend(account, tier);
   return { metered: true, tier, account: spent.account, from: spent.from, cost: spent.cost };
+}
+
+/** Hand a charge back in full. Safe to call when nothing was charged. */
+async function refundCharge(charge) {
+  if (!charge?.metered || !charge.from) return;
+  await credits.refund(charge.account, charge.from, charge.cost);
 }
 
 /** Refund anything the model failed to deliver, and report the new balance. */

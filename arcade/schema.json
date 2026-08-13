@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "label": "Arcade page",
   "blurb": "The landing page a published game ships inside.",
-  "goodFor": "Presentation only. Nothing here can affect the game \u2014 that separation is the point.",
+  "goodFor": "Presentation only. Nothing here can affect the game — that separation is the point.",
   "reachability": null,
   "mechanicHooks": {},
   "config": {
@@ -18,7 +18,7 @@
           "clay"
         ],
         "default": "pixel",
-        "doc": "Copied from the game's style at publish time. The page is not styled independently \u2014 changing the game's style restyles the page too."
+        "doc": "Copied from the game's style at publish time. The page is not styled independently — changing the game's style restyles the page too."
       },
       "layout": {
         "type": "enum",
@@ -79,7 +79,7 @@
           "title": {
             "type": "string",
             "maxLength": 60,
-            "default": "Untitled Rumpus"
+            "default": "Untitled Romp"
           },
           "tagline": {
             "type": "string",
@@ -158,7 +158,7 @@
           "badge": {
             "type": "bool",
             "default": true,
-            "doc": "Show the small 'Made with Rumpus' link."
+            "doc": "Show the small 'Made with Romp' link."
           }
         }
       }

@@ -1,4 +1,4 @@
-// Local Rumpus server. Zero dependencies: node:http, node:fs, built-in fetch.
+// Local Romp server. Zero dependencies: node:http, node:fs, built-in fetch.
 //
 // A thin transport over server/api.js — the same module the Netlify Function
 // calls — plus static file serving, which on Netlify is the CDN's job.
@@ -85,7 +85,7 @@ const server = createServer(async (req, res) => {
         body,
         rawBody: raw,
         headers: req.headers,
-        token: req.headers['x-rumpus-token'] ?? null,
+        token: req.headers['x-romp-token'] ?? null,
         ip: req.socket.remoteAddress ?? null,
         origin: `http://${req.headers.host ?? `localhost:${PORT}`}`,
       });
@@ -115,7 +115,7 @@ const server = createServer(async (req, res) => {
     const message = String(err?.message ?? err);
     if (!res.headersSent) json(res, 500, { error: message });
     else res.end();
-    console.error(`[rumpus] ${req.method} ${path} failed:`, message);
+    console.error(`[romp] ${req.method} ${path} failed:`, message);
   }
 });
 
@@ -125,6 +125,6 @@ server.listen(PORT, () => {
     ? `${PROVIDERS[provider].label} (${PROVIDERS[provider].defaultModel})`
     : 'no model key — offline generator';
   const deploy = hasToken() ? 'Netlify deploy ready' : 'local publish only';
-  console.log(`\n  Rumpus running at http://localhost:${PORT}`);
+  console.log(`\n  Romp running at http://localhost:${PORT}`);
   console.log(`  ${catalog().length} templates · ${mode} · ${deploy} · store: ${backendName()}\n`);
 });

@@ -15,11 +15,18 @@ const esc = (s) =>
  * the block early and the rest would parse as markup. Escaping `<` closes that
  * off without changing the parsed value.
  */
+// U+2028/U+2029 are JS line terminators but legal inside a JSON string, so a
+// title containing one would break the script block too. They're built with
+// fromCharCode rather than written as escapes because a raw one in this source
+// would itself be a syntax error, and the two are easy to confuse on sight.
+const LINE_SEP = String.fromCharCode(0x2028);
+const PARA_SEP = String.fromCharCode(0x2029);
+
 const jsonInScript = (value) =>
   JSON.stringify(value)
     .replace(/</g, '\\u003c')
-    .replace(/ /g, '\\u2028')
-    .replace(/ /g, '\\u2029');
+    .split(LINE_SEP).join('\\u2028')
+    .split(PARA_SEP).join('\\u2029');
 
 import { getStyle, pageThemeFrom } from '../shared/styles.js';
 

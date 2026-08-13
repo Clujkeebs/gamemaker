@@ -1,6 +1,6 @@
 // The no-API-key path.
 //
-// Rumpus without ANTHROPIC_API_KEY still works: keyword classification, a
+// Romp with no model key at all still works: keyword classification, a
 // palette picked from the words you used, and a procedurally generated level.
 // It is obviously dumber than the model, and it is honest about that in the UI.
 // It exists because a demo that dies on a missing env var is a demo that dies.
@@ -93,7 +93,7 @@ function titleFrom(prompt) {
     .split(/\s+/)
     .filter((w) => w && !STOP.has(w.toLowerCase()));
   const picked = words.slice(0, 3);
-  if (!picked.length) return 'Untitled Rumpus';
+  if (!picked.length) return 'Untitled Romp';
   return picked.map((w) => w[0].toUpperCase() + w.slice(1).toLowerCase()).join(' ');
 }
 

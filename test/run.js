@@ -606,11 +606,15 @@ test('a level the solver cannot settle is reported as unverified, not as broken'
 test('generated push puzzles are solvable by construction', () => {
   // Reverse-pull construction means solvability is structural, not searched
   // for. If this ever fails, the construction is wrong — not the solver.
+  //
+  // Deliberately generous budget: this asks the mathematical question "is this
+  // solvable", which has nothing to do with the seconds a web request can
+  // spare. The request-time budget is pinned by its own test below.
   let checked = 0;
   for (let seed = 1; seed <= 25; seed++) {
     const rows = generateSokoban(rng(seed * 7919), { boxes: 3, pulls: 26 });
     if (!rows) continue; // degenerate roll, legitimately rejected
-    const res = checkSokoban(rows);
+    const res = checkSokoban(rows, { msBudget: 60000 });
     assert.equal(res.status, 'solved', `seed ${seed}: ${res.reasons.join('; ')}`);
     checked += 1;
   }
@@ -748,4 +752,54 @@ test('the page renderer survives a game with no copy at all', () => {
   const gameHtml = renderGamePage(game);
   assert.ok(gameHtml.includes('ROMP_META'), 'the game page did not render');
   assert.ok(!/"title":\s*undefined/.test(gameHtml), 'inlined invalid JS into the game page');
+});
+
+test('the solver answers within its time budget, however open the level', () => {
+  // A state cap is not a time limit: every node runs a flood fill, so cost per
+  // state swings wildly with the level. This wide-open 4-crate warehouse — a
+  // real grid a live model produced — took 46 seconds inside the same 60k-state
+  // budget that tight puzzles finish instantly, which is longer than the host
+  // will hold a request open. Giving up in time and saying so beats a timeout.
+  const grid = [
+    '############',
+    '#..........#',
+    '#..T....T..#',
+    '#..........#',
+    '#..B....B..#',
+    '#....P.....#',
+    '#..B....B..#',
+    '#..........#',
+    '#..T....T..#',
+    '#..........#',
+    '############',
+  ];
+  const started = Date.now();
+  const res = checkSokoban(grid, { msBudget: 500 });
+  const elapsed = Date.now() - started;
+
+  assert.ok(elapsed < 5000, `solver ran ${elapsed}ms against a 500ms budget`);
+  assert.equal(res.ok, true, 'an unsettled level must be let through, not rejected');
+  assert.equal(res.status, 'unknown');
+  assert.match(res.reasons[0], /ran out of time/);
+});
+
+test('a repair that cannot find a solvable replacement still returns promptly', () => {
+  // repairLevel retries generation up to eight times, each re-running the
+  // solver — so the slow levels are exactly the ones that stack.
+  const schema = templates.get('puzzle-sokoban').schema;
+  const cfg = validate(exampleConfig('puzzle-sokoban'), schema).config;
+  cfg.level.grid = [
+    '##########',
+    '#B.......#',
+    '#..T.....#',
+    '#........#',
+    '#...P....#',
+    '#........#',
+    '##########',
+  ];
+  const started = Date.now();
+  const fixed = repairLevel(schema, cfg);
+  const elapsed = Date.now() - started;
+  assert.ok(elapsed < 15000, `repair took ${elapsed}ms`);
+  assert.equal(fixed.check.ok, true, `repair left it broken: ${fixed.check.reasons.join('; ')}`);
 });

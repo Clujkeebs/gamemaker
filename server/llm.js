@@ -80,16 +80,53 @@ export class ModelError extends Error {
   }
 }
 
+// Newer Claude models reject `temperature` outright ("deprecated for this
+// model"); older ones still honour it, and the model id doesn't tell you which
+// you have. Guessing wrong is not a small problem: every call 400s, and because
+// a failed model call falls back to the offline generator, the app keeps
+// working and quietly never uses Claude at all.
+//
+// So: send it, and if the API objects, drop it and remember for the rest of the
+// process. Costs one wasted request per boot on a newer model, and keeps the
+// temperatures the pipeline actually relies on wherever they're supported.
+let anthropicTakesTemperature = true;
+
 async function callAnthropic({ system, messages, maxTokens, temperature, model }) {
-  const res = await fetch(`${ANTHROPIC_BASE}/v1/messages`, {
+  const send = (withTemperature) => fetch(`${ANTHROPIC_BASE}/v1/messages`, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
       'x-api-key': process.env.ANTHROPIC_API_KEY,
       'anthropic-version': '2023-06-01',
     },
-    body: JSON.stringify({ model, max_tokens: maxTokens, temperature, system, messages }),
+    body: JSON.stringify({
+      model,
+      max_tokens: maxTokens,
+      system,
+      messages,
+      // Newer models reason before answering by default, and that reasoning is
+      // billed against max_tokens: measured here, 2584 of 3194 output tokens
+      // went to thinking, leaving too little for the config itself — which
+      // truncates the JSON and gets the whole generation thrown away. Writing a
+      // config against a schema is a transcription job, not a reasoning one, so
+      // turning it off costs nothing and takes a call from ~29s to ~1.5s.
+      // Accepted by every current model, including ones that never think.
+      thinking: { type: 'disabled' },
+      ...(withTemperature ? { temperature } : {}),
+    }),
   });
+
+  let res = await send(anthropicTakesTemperature);
+
+  if (res.status === 400 && anthropicTakesTemperature) {
+    const detail = await res.text().catch(() => '');
+    if (!/temperature/i.test(detail)) {
+      throw new ModelError(`Claude API 400: ${detail.slice(0, 400)}`, 400);
+    }
+    anthropicTakesTemperature = false;
+    res = await send(false);
+  }
+
   if (!res.ok) {
     throw new ModelError(`Claude API ${res.status}: ${(await res.text().catch(() => '')).slice(0, 400)}`, res.status);
   }

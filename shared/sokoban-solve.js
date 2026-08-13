@@ -47,9 +47,16 @@ export function structuralProblems(state) {
 /**
  * @returns { status: 'solved'|'unsolvable'|'unknown', pushes, explored }
  */
-export function solve(state, { cap = 60000 } = {}) {
+export function solve(state, { cap = 60000, msBudget = 2000 } = {}) {
   if (!state.player) return { status: 'unsolvable', explored: 0 };
   if (solved(state, state.boxes)) return { status: 'solved', pushes: 0, explored: 0 };
+
+  // A state count is not a time limit. Every node here runs a flood fill, so
+  // cost per state varies hugely with the level: a wide-open 4-crate warehouse
+  // measured 46s inside the same 60k-state budget that a tight puzzle finishes
+  // in milliseconds. What the caller actually needs to bound is wall clock —
+  // this runs inside a request that has to answer before the host hangs up.
+  const deadline = Date.now() + msBudget;
 
   const targets = new Set(state.targets.map((t) => cellKey(t.x, t.y)));
   const start = normalise(state, state.player, state.boxes);
@@ -60,7 +67,12 @@ export function solve(state, { cap = 60000 } = {}) {
   while (frontier.length) {
     const next = [];
     for (const node of frontier) {
-      if (++explored > cap) return { status: 'unknown', explored };
+      if (++explored > cap) return { status: 'unknown', explored, limit: 'states' };
+      // Checking the clock every node is measurable overhead; every 64 is
+      // plenty of resolution against a budget in seconds.
+      if ((explored & 63) === 0 && Date.now() > deadline) {
+        return { status: 'unknown', explored, limit: 'time' };
+      }
 
       const occupied = new Set(node.boxes.map((b) => cellKey(b.x, b.y)));
       for (let i = 0; i < node.boxes.length; i++) {
@@ -107,7 +119,11 @@ export function checkSokoban(rows, opts = {}) {
     // Explicitly not a failure. Say what happened and let it through.
     return {
       ok: true,
-      reasons: [`solver hit its ${result.explored}-state budget without settling this level; letting it through unverified`],
+      reasons: [
+        result.limit === 'time'
+          ? `solver ran out of time after ${result.explored} states without settling this level; letting it through unverified`
+          : `solver hit its ${result.explored}-state budget without settling this level; letting it through unverified`,
+      ],
       status: 'unknown',
       unreachable: [],
     };

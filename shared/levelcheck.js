@@ -84,7 +84,11 @@ export function repairLevel(schema, config) {
   if (schema.reachability?.kind === 'sokoban') {
     const rows = config.level.grid;
     const rand = rng(hashString(JSON.stringify(rows)) || 1);
-    for (let attempt = 0; attempt < 8; attempt++) {
+    // Each attempt re-runs the solver, so eight of them can stack into minutes
+    // on exactly the levels that were slow to reject in the first place. Bound
+    // the whole loop, not just each try.
+    const deadline = Date.now() + 4000;
+    for (let attempt = 0; attempt < 8 && Date.now() < deadline; attempt++) {
       const generated = generateSokoban(rand, {
         w: Math.min(14, Math.max(7, rows[0]?.length ?? 10)),
         h: Math.min(11, Math.max(5, rows.length)),

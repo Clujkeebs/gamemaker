@@ -231,10 +231,32 @@ Steps 1–5 of the build order are implemented and tested end to end: prompt →
 config → live preview → conversational edit → publish → arcade page → custom
 domain. Step 6 is template-library expansion, which is ongoing by design.
 
-Four things are **unverified against live services**, because the environment
-this was built in has no outbound access to them: Groq, Claude, Stripe and
-Netlify. Every one of them is tested up to its own network boundary instead —
-both model providers and Stripe against mock HTTP servers that speak their real
-wire formats, and the Netlify client written against the documented file-digest
-API. What that means in practice: the first run against real credentials is the
-first time those four sockets have ever opened.
+**Claude is verified against the live API.** Real end-to-end generations across
+every template return valid, winnable, runnable configs with zero schema errors
+and zero clamps. Three bugs only a real socket could find are fixed as a result
+— see "Latency and the model call" below.
+
+**Groq, Stripe and Netlify deploys remain unverified.** They're tested against
+mock servers speaking their real wire formats, and the Netlify client is written
+against the documented file-digest API, but no real socket has opened to any of
+them from here.
+
+### Latency and the model call
+
+Measured, live, end to end through `/api/generate`:
+
+| Prompt | Time |
+|---|---|
+| top-down shooter | ~7s |
+| platformer | ~9s |
+| push puzzle (slowest) | ~11s |
+
+Two things follow from that, and both matter for hosting:
+
+- **Raise the function timeout to 26s.** Netlify's synchronous default is 10s,
+  which the push puzzle exceeds. 26s is the maximum and leaves real headroom.
+- **Extended thinking must stay off.** Newer Claude models reason before
+  answering by default and bill it against `max_tokens` — measured here, 2584 of
+  3194 output tokens went to thinking, truncating the config and throwing the
+  whole generation away. `thinking: { type: 'disabled' }` takes a call from ~29s
+  to ~1.5s. Writing a config against a schema is transcription, not reasoning.

@@ -219,6 +219,17 @@ ${JSON.stringify(example, null, 1)}`,
                   { provider: attempt.provider, model: attempt.model });
   } catch (err) {
     if (err instanceof ModelError) {
+      // Falling back keeps visitors playing, but it also hides the difference
+      // between "the provider hiccuped" and "every call we make is malformed".
+      // The second kind never heals on its own and would otherwise look like a
+      // working app that is merely dumb, so say so where an operator can see it.
+      if (permanentModelFault(err)) {
+        console.error(
+          `[romp] model calls are failing in a way that will not fix itself (HTTP ${err.status}).\n` +
+          `       Every generation is falling back to the offline generator.\n` +
+          `       ${err.message}`
+        );
+      }
       const fallback = generateOffline(prompt, forcedTemplate);
       fallback.notes.degraded = err.message;
       return fallback;
@@ -226,6 +237,13 @@ ${JSON.stringify(example, null, 1)}`,
     throw err;
   }
 }
+
+/**
+ * A 4xx that isn't rate limiting is our request being wrong — a bad key, a
+ * retired model, a parameter the model no longer takes. Retrying cannot help.
+ */
+const permanentModelFault = (err) =>
+  typeof err.status === 'number' && err.status >= 400 && err.status < 500 && err.status !== 429;
 
 export async function edit({ templateId, config, instruction, title, tier = 'fast' }) {
   if (!get(templateId)) throw new Error(`unknown template ${templateId}`);

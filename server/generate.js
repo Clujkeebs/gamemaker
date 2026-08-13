@@ -18,7 +18,7 @@ function classifierSystem() {
   const lines = catalog().map(
     (t) => `- ${t.template_id} — ${t.blurb}\n    verbs: ${t.primary_verbs.join(', ')}\n    ${t.good_for}`
   );
-  return `You are the classifier stage of Rumpus, a 2D game generator.
+  return `You are the classifier stage of Romp, a 2D game generator.
 
 Pick the ONE archetype template that best fits the user's game idea, based on
 the core mechanic: movement + win/lose condition + the primary verb.
@@ -38,7 +38,7 @@ Reply with ONLY this JSON, no prose:
 }
 
 function configSystem(templateId) {
-  return `You are Rumpus, a game-generation engine. You produce a JSON CONFIG for a
+  return `You are Romp, a game-generation engine. You produce a JSON CONFIG for a
 fixed, already-working game template. You never write engine, physics, or
 game-loop code — the renderer combines your config with tested template code.
 
@@ -168,7 +168,7 @@ function finish(templateId, json, result, extra = {}, meta = {}) {
     template_id: templateId,
     template_version: schema.version,
     config,
-    title: String(json.title ?? 'Untitled Rumpus').slice(0, 60),
+    title: String(json.title ?? 'Untitled Romp').slice(0, 60),
     description: String(json.description ?? schema.blurb).slice(0, 200),
     changelog_note: json.changelog_note ? String(json.changelog_note).slice(0, 200) : undefined,
     source: 'model',

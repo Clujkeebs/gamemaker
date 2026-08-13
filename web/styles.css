@@ -1,4 +1,4 @@
-/* Rumpus editor. Loud, cheap, fast, unprecious — but legible. */
+/* Romp editor. Loud, cheap, fast, unprecious — but legible. */
 
 :root {
   --bg: #0a0b10;
@@ -34,7 +34,7 @@ body {
   overflow: hidden;
 }
 
-/* ── top bar ─────────────────────────────────────────── */
+/* ── top bar ──────────────────────────────────── */
 
 .topbar {
   display: flex; align-items: center; justify-content: space-between;
@@ -85,7 +85,7 @@ body {
 .credit-bar b { font-size: 19px; line-height: 1.1; }
 #packs { flex-wrap: wrap; margin-bottom: 6px; }
 
-/* ── layout ──────────────────────────────────────────── */
+/* ── layout ─────────────────────────────────── */
 
 .app {
   flex: 1; min-height: 0;
@@ -113,7 +113,7 @@ body {
   .panel { overflow: visible; }
 }
 
-/* ── controls ────────────────────────────────────────── */
+/* ── controls ───────────────────────────────── */
 
 .label {
   display: block; font-size: 11px; font-weight: 700;
@@ -159,7 +159,7 @@ input:disabled, button:disabled { opacity: 0.45; cursor: not-allowed; }
 .muted { color: var(--muted); }
 .tiny { font-size: 12px; }
 
-/* ── log ─────────────────────────────────────────────── */
+/* ── log ────────────────────────────────────── */
 
 .log { margin-top: 14px; display: flex; flex-direction: column-reverse; gap: 8px; }
 .entry {
@@ -173,7 +173,7 @@ input:disabled, button:disabled { opacity: 0.45; cursor: not-allowed; }
 .entry.bad { border-left-color: var(--bad); }
 .entry .act { margin-top: 7px; display: flex; gap: 7px; }
 
-/* ── stage ───────────────────────────────────────────── */
+/* ── stage ──────────────────────────────────── */
 
 .stage-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex: none; }
 .titles { min-width: 0; }
@@ -218,7 +218,7 @@ input:disabled, button:disabled { opacity: 0.45; cursor: not-allowed; }
 .note.bad { color: var(--bad); border-color: #4a2422; }
 .note.ok { color: var(--good); border-color: #234a2c; }
 
-/* ── ship panel ──────────────────────────────────────── */
+/* ── ship panel ──────────────────────────────── */
 
 .section-title {
   font-size: 11px; font-weight: 700; letter-spacing: 0.1em;

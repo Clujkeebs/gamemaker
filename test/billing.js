@@ -401,3 +401,51 @@ test('nothing a visitor publishes contains their credit token', async () => {
     assert.ok(!contents.includes(token), `${file} in the published bundle contains the visitor token`);
   }
 });
+
+// ── regressions: malformed input must not become a 500 ──────────────────────
+
+test('a game with no title publishes instead of crashing the renderer', async () => {
+  // JSON.stringify(undefined) returns undefined rather than a string, so the
+  // helper that inlines the title into the page's <script> threw on it. Any
+  // client publishing a game without copy took down the whole request.
+  const token = await newVisitor('10.0.4.1');
+  const gen = await call('/api/generate', { method: 'POST', token, body: { prompt: 'a cat game' } });
+  delete gen.body.title;
+  delete gen.body.description;
+
+  const pub = await call('/api/publish', { method: 'POST', token, body: { game: gen.body } });
+  assert.equal(pub.status, 200, JSON.stringify(pub.body));
+
+  const { readBundleFile } = await import('../server/storage.js');
+  const html = await readBundleFile(pub.body.slug, 'index.html');
+  assert.ok(!/undefined/.test(html), 'the page rendered the word "undefined"');
+});
+
+test('malformed publish and generate requests are refused, not crashed', async () => {
+  const token = await newVisitor('10.0.4.2');
+  const attempts = [
+    ['/api/publish', { game: { template_id: 'platformer-classic', config: [] } }],
+    ['/api/publish', { game: { template_id: 'platformer-classic', config: 'nope' } }],
+    ['/api/generate', { prompt: 'a cat', template: 'no-such-template' }],
+  ];
+  for (const [pathname, body] of attempts) {
+    const res = await call(pathname, { method: 'POST', token, body });
+    assert.equal(res.status, 400, `${pathname} ${JSON.stringify(body)} -> ${res.status}`);
+  }
+});
+
+test('forcing an unknown template is refused before any credit is taken', async () => {
+  const token = await newVisitor('10.0.4.3');
+  const before = (await credits.getAccount(token)).free;
+  const res = await call('/api/generate', { method: 'POST', token, body: { prompt: 'a cat', template: 'nope' } });
+  assert.equal(res.status, 400);
+  assert.equal((await credits.getAccount(token)).free, before, 'a rejected request still charged');
+});
+
+test('a page that is not a page falls back to the generated one', async () => {
+  const token = await newVisitor('10.0.4.4');
+  const gen = await call('/api/generate', { method: 'POST', token, body: { prompt: 'a cat game' } });
+  const pub = await call('/api/publish', { method: 'POST', token, body: { game: gen.body, page: 5 } });
+  assert.equal(pub.status, 200, JSON.stringify(pub.body));
+  assert.ok(pub.body.page?.hero?.title, 'no usable page was produced');
+});

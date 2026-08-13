@@ -22,11 +22,17 @@ const esc = (s) =>
 const LINE_SEP = String.fromCharCode(0x2028);
 const PARA_SEP = String.fromCharCode(0x2029);
 
-const jsonInScript = (value) =>
-  JSON.stringify(value)
+const jsonInScript = (value) => {
+  // JSON.stringify returns the *value* undefined (not a string) for undefined,
+  // functions and symbols. Splicing that into a script block would emit the
+  // bare word "undefined" at best and throw here at worst, so normalise to a
+  // literal first: this helper must never produce invalid JS.
+  const json = JSON.stringify(value) ?? 'null';
+  return json
     .replace(/</g, '\\u003c')
     .split(LINE_SEP).join('\\u2028')
     .split(PARA_SEP).join('\\u2029');
+};
 
 import { getStyle, pageThemeFrom } from '../shared/styles.js';
 
@@ -43,10 +49,12 @@ export function defaultPage(game, schemaDefaults) {
   const style = getStyle(game.config?.style);
   page.style = style.id;
   page.theme = { ...page.theme, ...pageThemeFrom(style, game.config?.theme ?? {}) };
-  page.hero.title = game.title;
-  page.hero.tagline = game.description;
+  // Fall back rather than inherit undefined: a game published without copy
+  // should get a plain page, not a page with holes in it.
+  page.hero.title = String(game.title ?? 'Untitled Romp');
+  page.hero.tagline = String(game.description ?? 'A game that appeared out of a sentence.');
   page.hero.ctaLabel = 'Play';
-  page.about.body = game.description;
+  page.about.body = page.hero.tagline;
   page.howTo.steps = controlsFor(game);
   page.credits.body = 'Made in Romp from a one-line idea.';
   return page;

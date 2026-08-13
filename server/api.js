@@ -36,6 +36,9 @@ export const mimeFor = (path) => MIME[path.split('.').pop()?.toLowerCase()] ?? '
 const ok = (body) => ({ status: 200, body });
 const bad = (status, error, extra = {}) => ({ status, body: { error, ...extra } });
 
+/** A record of fields — not an array, not null, not a scalar. */
+const isPlainObject = (v) => typeof v === 'object' && v !== null && !Array.isArray(v);
+
 // An unknown tier from a client is treated as the cheap one rather than
 // trusted, and "best" is downgraded when it would not actually be better.
 const pickTier = (raw) => effectiveTier(raw);
@@ -139,6 +142,9 @@ export async function handleApi(req) {
     const prompt = String(body.prompt ?? '').trim();
     if (!prompt) return bad(400, 'Say what kind of game you want.');
     if (prompt.length > 2000) return bad(400, 'That idea is too long — trim it to a couple of sentences.');
+    // Checked before charging: forcing an unknown template used to reach the
+    // pipeline and throw on a null schema, which took the credit with it.
+    if (body.template != null && !get(body.template)) return bad(400, 'unknown template');
 
     const charge = await beginCharge({ token, ip, tier: body.tier });
     if (charge.error) return charge.error;
@@ -193,10 +199,18 @@ export async function handleApi(req) {
     if (!game?.template_id || !game?.config) return bad(400, 'publish needs a generated game');
     const t = get(game.template_id);
     if (!t) return bad(400, 'unknown template');
+    // An array is truthy, so the check above lets one through. Everything
+    // downstream treats a config as a record of fields.
+    if (!isPlainObject(game.config)) return bad(400, 'publish needs a config object');
 
     // Never publish a config that hasn't been through validation, whatever the
     // client says. The published bundle is the artifact people share.
     game.config = validate(game.config, t.schema).config;
+    // Same normalisation the generate pipeline applies, repeated here because
+    // publish accepts a game from the client, not only one we just produced.
+    // The title becomes a slug and a page heading, so it has to be a string.
+    game.title = String(game.title ?? 'Untitled Romp').slice(0, 60);
+    game.description = String(game.description ?? '').slice(0, 200);
     // The client echoes back whatever /api/generate returned, which now
     // includes its own credit balance and token. Nothing downstream should ever
     // see those, so drop them here rather than trusting every future caller.
@@ -205,7 +219,12 @@ export async function handleApi(req) {
     const existing = body.id ? await store.getGame(body.id) : null;
     const id = existing ? body.id : store.newId();
     const slug = await store.allocateSlug(game.title, id);
-    const page = body.page ?? defaultPage(game, defaultsFor(arcadeSchema.config));
+    // The page is rendered straight into HTML, so a client sending something
+    // that isn't a page gets the generated one rather than a 500 from deep
+    // inside the renderer.
+    const page = isPlainObject(body.page)
+      ? body.page
+      : defaultPage(game, defaultsFor(arcadeSchema.config));
 
     const { files } = buildBundle({ game, page });
     await storage.writeBundle(slug, files);

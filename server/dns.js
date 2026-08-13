@@ -7,7 +7,31 @@
 
 import { Resolver } from 'node:dns/promises';
 
-const isApex = (domain) => domain.split('.').filter(Boolean).length <= 2;
+// Multi-label public suffixes common enough to matter. Counting dots alone gets
+// mygame.co.uk wrong — it calls it a subdomain and tells the user to add
+// "CNAME mygame" at the co.uk level, which nobody can do. This is not the full
+// public suffix list and isn't meant to be; it's the set a hobby game domain is
+// realistically registered under. Anything unlisted falls back to dot-counting,
+// which is right for every single-label TLD.
+const MULTI_LABEL_SUFFIXES = new Set([
+  'co.uk', 'org.uk', 'me.uk', 'ac.uk', 'gov.uk',
+  'co.nz', 'co.za', 'co.jp', 'co.kr', 'co.in', 'co.il',
+  'com.au', 'net.au', 'org.au', 'com.br', 'com.mx', 'com.ar',
+  'com.tr', 'com.cn', 'com.sg', 'com.hk', 'com.tw', 'com.pl',
+  'or.jp', 'ne.jp', 'go.jp',
+]);
+
+/**
+ * Is this the whole registrable domain rather than a subdomain of one?
+ *
+ * Apex matters for two reasons: the records differ, and an apex physically
+ * cannot carry a CNAME — that's a DNS rule, not a registrar limitation.
+ */
+export function isApex(domain) {
+  const labels = String(domain).split('.').filter(Boolean);
+  const lastTwo = labels.slice(-2).join('.');
+  return MULTI_LABEL_SUFFIXES.has(lastTwo) ? labels.length <= 3 : labels.length <= 2;
+}
 
 export function validateDomain(input) {
   const domain = String(input || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
@@ -36,15 +60,26 @@ export function instructionsFor(domain, target) {
   };
 }
 
+/** Public resolvers, not the system one — see verify(). */
+function publicResolver() {
+  const resolver = new Resolver({ timeout: 4000, tries: 2 });
+  resolver.setServers(['1.1.1.1', '8.8.8.8']);
+  return resolver;
+}
+
+const bare = (host) => String(host || '').replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/\.$/, '');
+
 /**
  * Check whether the record is live yet.
+ *
  * Queries public resolvers directly rather than the system one: a cached
  * negative from the local resolver would report "not set up" long after the
  * user got it right.
+ *
+ * `resolver` is injectable so the address path can be tested without a network.
  */
-export async function verify(domain, target) {
-  const resolver = new Resolver({ timeout: 4000, tries: 2 });
-  resolver.setServers(['1.1.1.1', '8.8.8.8']);
+export async function verify(domain, target, resolver = publicResolver()) {
+  const targetHost = bare(target);
 
   const found = { cname: [], a: [] };
   await Promise.all([
@@ -52,10 +87,23 @@ export async function verify(domain, target) {
     resolver.resolve4(domain).then((r) => (found.a = r)).catch(() => {}),
   ]);
 
-  const targetHost = String(target || '').replace(/^https?:\/\//, '').replace(/\/$/, '');
-  const matches = found.cname.some((c) => c.replace(/\.$/, '') === targetHost);
+  const verified = (message) => ({ state: 'verified', found, message });
 
-  if (matches) return { state: 'verified', found, message: `${domain} points at ${targetHost}.` };
+  if (found.cname.some((c) => bare(c) === targetHost)) {
+    return verified(`${domain} points at ${targetHost}.`);
+  }
+
+  // An apex domain can't hold a CNAME, so the ALIAS/A record we asked for
+  // resolves to addresses rather than to a name. Comparing it against the
+  // target's *name* would never match, which used to leave a correctly
+  // configured apex stuck reporting "mismatch" forever. Compare addresses.
+  if (found.a.length && targetHost) {
+    const targetIps = await resolver.resolve4(targetHost).catch(() => []);
+    if (targetIps.length && found.a.some((ip) => targetIps.includes(ip))) {
+      return verified(`${domain} points at the same address as ${targetHost}.`);
+    }
+  }
+
   if (found.cname.length || found.a.length) {
     return {
       state: 'mismatch',

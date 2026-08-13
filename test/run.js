@@ -18,6 +18,7 @@ import { STYLES, STYLE_NAMES } from '../shared/styles.js';
 import { checkSokoban, structuralProblems, generateSokoban, solve as solveSokoban } from '../shared/sokoban-solve.js';
 import { parseSokoban } from '../shared/sokoban.js';
 import { rng } from '../shared/draw.js';
+import { isApex, instructionsFor, verify as dnsVerify } from '../server/dns.js';
 
 const all = [...templates.values()];
 const arcadeSchema = JSON.parse(readFileSync(join(ROOT, 'arcade', 'schema.json'), 'utf8'));
@@ -671,4 +672,80 @@ test('keyword inference matches words, not substrings', () => {
 
   // Prefix matching is still wanted: "pushing" should match the "push" signal.
   assert.equal(classifyOffline('pushing blocks onto switches').template_id, 'puzzle-sokoban');
+});
+
+// ── custom domains ──────────────────────────────────────────────────────────
+
+test('a domain under a multi-label suffix is treated as an apex, not a subdomain', () => {
+  // Counting dots calls mygame.co.uk a subdomain and tells the user to add
+  // "CNAME mygame" at the co.uk level — an instruction nobody can follow.
+  for (const apexDomain of ['mygame.com', 'mygame.co.uk', 'studio.com.au', 'thing.co.nz']) {
+    assert.equal(isApex(apexDomain), true, `${apexDomain} should be an apex`);
+    assert.ok(
+      instructionsFor(apexDomain, 'x.netlify.app').records.some((r) => r.type === 'ALIAS'),
+      `${apexDomain} was told to add a CNAME at its apex`
+    );
+  }
+  for (const sub of ['play.mygame.com', 'play.mygame.co.uk']) {
+    assert.equal(isApex(sub), false, `${sub} should be a subdomain`);
+    const [record] = instructionsFor(sub, 'x.netlify.app').records;
+    assert.equal(record.type, 'CNAME');
+    assert.equal(record.name, 'play');
+  }
+});
+
+// A stand-in for node's Resolver, so the address path is testable offline.
+const fakeResolver = ({ cname = {}, a = {} }) => ({
+  resolveCname: async (host) => cname[host] ?? Promise.reject(new Error('ENODATA')),
+  resolve4: async (host) => a[host] ?? Promise.reject(new Error('ENODATA')),
+});
+
+test('an apex pointed at the right place verifies, even though it has no CNAME', async () => {
+  // The bug this pins: we tell apex owners to add an ALIAS/A record (a CNAME at
+  // an apex is illegal in DNS), then only ever accepted a CNAME match — so a
+  // correctly configured apex reported "mismatch" forever and was never
+  // attached to the site.
+  const res = await dnsVerify('mygame.com', 'catninja.netlify.app', fakeResolver({
+    a: { 'mygame.com': ['75.2.60.5'], 'catninja.netlify.app': ['75.2.60.5'] },
+  }));
+  assert.equal(res.state, 'verified', res.message);
+});
+
+test('an apex pointed somewhere else is still a mismatch', async () => {
+  const res = await dnsVerify('mygame.com', 'catninja.netlify.app', fakeResolver({
+    a: { 'mygame.com': ['203.0.113.9'], 'catninja.netlify.app': ['75.2.60.5'] },
+  }));
+  assert.equal(res.state, 'mismatch');
+});
+
+test('a subdomain still verifies by CNAME, and an absent record reads as pending', async () => {
+  const ok = await dnsVerify('play.mygame.com', 'catninja.netlify.app', fakeResolver({
+    cname: { 'play.mygame.com': ['catninja.netlify.app.'] },
+  }));
+  assert.equal(ok.state, 'verified', ok.message);
+
+  const nothing = await dnsVerify('play.mygame.com', 'catninja.netlify.app', fakeResolver({}));
+  assert.equal(nothing.state, 'pending');
+  assert.match(nothing.message, /propagate/);
+});
+
+test('the page renderer survives a game with no copy at all', () => {
+  // JSON.stringify(undefined) is the value undefined, not a string, so the
+  // helper that inlines the title into the page's <script> block threw on it.
+  // Tested here rather than only through the API, because the API coerces the
+  // title first and would hide a regression in the renderer itself.
+  const game = generateOffline('a cat ninja in a bamboo forest');
+  delete game.title;
+  delete game.description;
+
+  const page = defaultPage(game, defaultsFor(arcadeSchema.config));
+  assert.ok(page.hero.title, 'the page inherited an undefined title');
+
+  const html = renderArcadePage(page, game);
+  assert.ok(!html.includes('undefined'), 'the arcade page rendered the word "undefined"');
+
+  // renderGamePage takes the game directly, so it sees the missing title raw.
+  const gameHtml = renderGamePage(game);
+  assert.ok(gameHtml.includes('ROMP_META'), 'the game page did not render');
+  assert.ok(!/"title":\s*undefined/.test(gameHtml), 'inlined invalid JS into the game page');
 });

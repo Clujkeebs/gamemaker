@@ -17,7 +17,7 @@ you change it by talking to it, and publishes it to a link you can share.
 
 ```bash
 npm start          # http://localhost:4173
-npm test           # 98 tests, no network needed
+npm test           # 107 tests, no network needed
 ```
 
 No install step. No build step. No dependencies — Node 20+ and nothing else.
@@ -179,7 +179,7 @@ templates/    one directory per archetype: engine.js + schema.json + examples/
 arcade/       the landing-page template and its own config schema
 server/       zero-dep HTTP server, generation pipeline, bundler, deploy, DNS
 web/          the editor, plus /styles.html — the sprite and style gallery
-test/         98 tests, incl. mocked model, Stripe and function harnesses
+test/         107 tests, incl. mocked model, Stripe and function harnesses
 ```
 
 ## Deploying

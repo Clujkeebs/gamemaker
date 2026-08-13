@@ -1,4 +1,4 @@
-// Rumpus editor.
+// Romp editor.
 //
 // Holds one game at a time: a template id, a config, and the copy around it.
 // The preview is an iframe we talk to over postMessage — the game never shares
@@ -28,7 +28,7 @@ const el = {
 
 // The visitor's credit token. A convenience, not a login: it identifies a
 // browser so a balance can follow it, and clearing storage starts over.
-const TOKEN_KEY = 'rumpus.token';
+const TOKEN_KEY = 'romp.token';
 const getToken = () => { try { return localStorage.getItem(TOKEN_KEY); } catch { return null; } };
 const setToken = (t) => { try { if (t) localStorage.setItem(TOKEN_KEY, t); } catch { /* private mode */ } };
 
@@ -55,13 +55,13 @@ const STARTERS = [
 
 const EDIT_IDEAS = ['make it harder', 'now it\'s underwater', 'give them a double jump', 'more enemies', 'make it night time'];
 
-// ── plumbing ────────────────────────────────────────────────────────────────
+// ── plumbing ─────────────────────────────────────────────────────────────
 
 async function api(path, body) {
   const token = getToken();
   const headers = {};
   if (body) headers['content-type'] = 'application/json';
-  if (token) headers['x-rumpus-token'] = token;
+  if (token) headers['x-romp-token'] = token;
 
   const res = await fetch(path, {
     method: body ? 'POST' : 'GET',
@@ -83,7 +83,7 @@ async function api(path, body) {
   return data;
 }
 
-// ── credits ─────────────────────────────────────────────────────────────────
+// ── credits ────────────────────────────────────────────────────────────
 
 function showCredits(account) {
   if (!account || account.metered === false) return;
@@ -123,7 +123,7 @@ async function applyPromo() {
       ? `+${out.granted} credits (capped at the ${out.maxFree} free maximum).`
       : `+${out.granted} credits. Have fun.`;
     el.promoCode.value = '';
-    log('rumpus', `Code accepted — ${out.granted} credits added.`, 'ok');
+    log('romp', `Code accepted — ${out.granted} credits added.`, 'ok');
   } catch (err) {
     el.promoMsg.hidden = false;
     el.promoMsg.style.color = 'var(--bad)';
@@ -138,7 +138,7 @@ async function buy(pack) {
     const out = await api('/api/checkout', { pack });
     location.href = out.url;
   } catch (err) {
-    log('rumpus', `Checkout failed. ${err.message}`, 'bad');
+    log('romp', `Checkout failed. ${err.message}`, 'bad');
   }
 }
 
@@ -168,29 +168,29 @@ function busy(on, text = 'building…') {
   el.busyText.textContent = text;
   el.stageBusy.hidden = !on;
   el.make.disabled = on;
-  el.make.textContent = on ? 'making…' : 'Make a rumpus';
+  el.make.textContent = on ? 'making…' : 'Make a romp';
   el.applyEdit.disabled = on || !state.game;
   el.reroll.disabled = on || !state.lastPrompt;
   el.publish.disabled = on || !state.game;
 }
 
-// ── preview ─────────────────────────────────────────────────────────────────
+// ── preview ────────────────────────────────────────────────────────────
 
 addEventListener('message', (e) => {
   const d = e.data;
   if (!d || typeof d !== 'object') return;
-  if (d.type === 'rumpus:ready') {
+  if (d.type === 'romp:ready') {
     state.frameReady = true;
     pushConfig();
   }
-  if (d.type === 'rumpus:error') {
+  if (d.type === 'romp:error') {
     log('engine', `The game crashed: ${d.message}`, 'bad');
   }
 });
 
 function pushConfig() {
   if (!state.game || !state.frameReady) return;
-  el.preview.contentWindow?.postMessage({ type: 'rumpus:config', config: state.game.config }, '*');
+  el.preview.contentWindow?.postMessage({ type: 'romp:config', config: state.game.config }, '*');
 }
 
 function mountPreview(game) {
@@ -206,7 +206,7 @@ function mountPreview(game) {
   el.preview.src = `/preview.html?t=${encodeURIComponent(game.template_id)}`;
 }
 
-// ── rendering the current game ──────────────────────────────────────────────
+// ── rendering the current game ────────────────────────────────────────────
 
 const CONTROLS = {
   'platformer-classic': 'arrows / WASD · space to jump',
@@ -260,10 +260,10 @@ function showNotes(game) {
     d.textContent = text;
     el.notes.appendChild(d);
   }
-  if (n.clamps?.length) console.info('[rumpus] clamped:', n.clamps);
+  if (n.clamps?.length) console.info('[romp] clamped:', n.clamps);
 }
 
-// ── actions ─────────────────────────────────────────────────────────────────
+// ── actions ────────────────────────────────────────────────────────────
 
 async function make(prompt) {
   const text = (prompt ?? el.prompt.value).trim();
@@ -277,10 +277,10 @@ async function make(prompt) {
   try {
     const game = await api('/api/generate', { prompt: text, tier: state.tier });
     showGame(game);
-    log('rumpus', `${game.title} — ${game.template_id}`, 'ok');
+    log('romp', `${game.title} — ${game.template_id}`, 'ok');
   } catch (err) {
-    if (err.data?.outOfCredits) log('rumpus', err.message, 'warn');
-    else log('rumpus', `That one broke. ${err.message}`, 'bad');
+    if (err.data?.outOfCredits) log('romp', err.message, 'warn');
+    else log('romp', `That one broke. ${err.message}`, 'bad');
   } finally {
     busy(false);
   }
@@ -304,7 +304,7 @@ async function applyEdit() {
     if (result.template_switch_required) {
       // Not a failure. Offer the switch, and be honest that it costs the
       // current game.
-      log('rumpus', `${result.reason}${result.suggested_template ? ` That needs the ${result.suggested_template} template.` : ''}`, 'warn',
+      log('romp', `${result.reason}${result.suggested_template ? ` That needs the ${result.suggested_template} template.` : ''}`, 'warn',
         result.suggested_template
           ? [{
               label: `Rebuild as ${result.suggested_template}`,
@@ -314,14 +314,14 @@ async function applyEdit() {
       return;
     }
     if (result.unavailable) {
-      log('rumpus', result.message, 'warn');
+      log('romp', result.message, 'warn');
       return;
     }
     showGame({ ...result, title: result.title || state.game.title });
-    log('rumpus', result.changelog_note ?? 'Changed.', 'ok');
+    log('romp', result.changelog_note ?? 'Changed.', 'ok');
   } catch (err) {
-    if (err.data?.outOfCredits) log('rumpus', err.message, 'warn');
-    else log('rumpus', `That edit broke. ${err.message}`, 'bad');
+    if (err.data?.outOfCredits) log('romp', err.message, 'warn');
+    else log('romp', `That edit broke. ${err.message}`, 'bad');
   } finally {
     busy(false);
   }
@@ -336,9 +336,9 @@ async function rebuildAs(templateId, extra) {
       tier: state.tier,
     });
     showGame(game);
-    log('rumpus', `Rebuilt on ${templateId}. The old config is gone.`, 'ok');
+    log('romp', `Rebuilt on ${templateId}. The old config is gone.`, 'ok');
   } catch (err) {
-    log('rumpus', `Rebuild failed. ${err.message}`, 'bad');
+    log('romp', `Rebuild failed. ${err.message}`, 'bad');
   } finally {
     busy(false);
   }
@@ -357,11 +357,11 @@ async function publish() {
     state.page = out.page;
     renderPublished(out);
     fillPageEditor(out.page);
-    log('rumpus', out.liveUrl
+    log('romp', out.liveUrl
       ? `Live at ${out.liveUrl}`
       : `Bundled ${out.files} files. Serving locally at /p/${out.slug}/${out.deployError ? ` (Netlify: ${out.deployError})` : ''}`, 'ok');
   } catch (err) {
-    log('rumpus', `Publish failed. ${err.message}`, 'bad');
+    log('romp', `Publish failed. ${err.message}`, 'bad');
   } finally {
     busy(false);
   }
@@ -409,7 +409,7 @@ function collectPage() {
   return page;
 }
 
-// ── custom domain ───────────────────────────────────────────────────────────
+// ── custom domain ──────────────────────────────────────────────────────
 
 async function dnsShow() {
   const domain = el.domain.value.trim();
@@ -449,7 +449,7 @@ async function dnsVerify() {
   }
 }
 
-// ── wiring ──────────────────────────────────────────────────────────────────
+// ── wiring ─────────────────────────────────────────────────────────────
 
 el.make.onclick = () => make();
 el.reroll.onclick = () => make(state.lastPrompt);
@@ -457,7 +457,7 @@ el.applyEdit.onclick = applyEdit;
 el.publish.onclick = publish;
 el.republish.onclick = () => { state.page = collectPage(); publish(); };
 el.restart.onclick = () => {
-  el.preview.contentWindow?.postMessage({ type: 'rumpus:restart' }, '*');
+  el.preview.contentWindow?.postMessage({ type: 'romp:restart' }, '*');
   el.preview.focus();
 };
 // Style is one token shared by the game and its page, so switching it here
@@ -467,7 +467,7 @@ el.styleSelect.onchange = () => {
   state.game.config.style = el.styleSelect.value;
   if (state.page) state.page.style = el.styleSelect.value;
   pushConfig();
-  log('rumpus', `Restyled everything as ${el.styleSelect.options[el.styleSelect.selectedIndex].text.toLowerCase()}.`, 'ok');
+  log('romp', `Restyled everything as ${el.styleSelect.options[el.styleSelect.selectedIndex].text.toLowerCase()}.`, 'ok');
 };
 el.pgStyle.onchange = () => {
   el.styleSelect.value = el.pgStyle.value;
@@ -529,7 +529,7 @@ for (const [target, list, run] of [
       const account = await api('/api/account');
       showCredits(account);
       if (account.created) {
-        log('rumpus', account.overCap
+        log('romp', account.overCap
           ? `Lots of new sessions from your network today, so no free credits this time — a code still works.`
           : `${account.free} free credits to start. They run on ${label(fastProvider)}.`, account.overCap ? 'warn' : 'ok');
       }
@@ -550,13 +550,13 @@ for (const [target, list, run] of [
           : 'Credits never expire.';
       }
     } else {
-      log('rumpus', 'No model key set, so this is the offline generator: keyword matching and locally generated levels. It works — it is just dumber, conversational editing is off, and it is free and unmetered.', 'warn');
+      log('romp', 'No model key set, so this is the offline generator: keyword matching and locally generated levels. It works — it is just dumber, conversational editing is off, and it is free and unmetered.', 'warn');
     }
 
     // Coming back from a successful checkout: the webhook may land a moment
     // later, so re-read the balance shortly after rather than only once.
     if (new URLSearchParams(location.search).get('paid') === '1') {
-      log('rumpus', 'Payment received — topping up.', 'ok');
+      log('romp', 'Payment received — topping up.', 'ok');
       history.replaceState({}, '', location.pathname);
       for (const delay of [500, 2000, 5000]) {
         setTimeout(() => api('/api/account').then(showCredits).catch(() => {}), delay);

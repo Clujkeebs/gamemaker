@@ -18,8 +18,8 @@ const esc = (s) =>
 const jsonInScript = (value) =>
   JSON.stringify(value)
     .replace(/</g, '\\u003c')
-    .replace(/\u2028/g, '\\u2028')
-    .replace(/\u2029/g, '\\u2029');
+    .replace(/ /g, '\\u2028')
+    .replace(/ /g, '\\u2029');
 
 import { getStyle, pageThemeFrom } from '../shared/styles.js';
 
@@ -41,7 +41,7 @@ export function defaultPage(game, schemaDefaults) {
   page.hero.ctaLabel = 'Play';
   page.about.body = game.description;
   page.howTo.steps = controlsFor(game);
-  page.credits.body = 'Made in Rumpus from a one-line idea.';
+  page.credits.body = 'Made in Romp from a one-line idea.';
   return page;
 }
 
@@ -106,7 +106,7 @@ export function renderArcadePage(page, game, opts = {}) {
   }).join('\n      ');
 
   const badge = page.footer.badge
-    ? `<a class="badge" href="https://rumpus.gg" target="_blank" rel="noopener">Made with <b>Rumpus</b></a>`
+    ? `<a class="badge" href="https://romps.ai" target="_blank" rel="noopener">Made with <b>Romp</b></a>`
     : '';
 
   return `<!doctype html>
@@ -245,8 +245,8 @@ export function renderGamePage(game, opts = {}) {
 <script>
   // Pinned at publish time: template ${game.template_id} v${game.template_version}.
   // Improving that engine later must never change this already-shared game.
-  window.RUMPUS_CONFIG = ${jsonInScript(game.config)};
-  window.RUMPUS_META = ${jsonInScript({
+  window.ROMP_CONFIG = ${jsonInScript(game.config)};
+  window.ROMP_META = ${jsonInScript({
     title: game.title,
     template_id: game.template_id,
     template_version: game.template_version,

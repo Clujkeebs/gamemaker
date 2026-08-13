@@ -23,7 +23,7 @@
   } else {
     import(`/templates/${id}/engine.js`).catch((err) => {
       document.body.innerHTML = `<p class="err">could not load ${id}<br>${err.message}</p>`;
-      parent !== window && parent.postMessage({ type: 'rumpus:error', message: String(err.message) }, '*');
+      parent !== window && parent.postMessage({ type: 'romp:error', message: String(err.message) }, '*');
     });
   }
 </script>

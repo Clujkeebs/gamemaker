@@ -86,7 +86,7 @@ export function boot(makeGame, opts = {}) {
     if (state.phase !== 'play') return;
     state.phase = phase;
     state.message = message || (phase === 'won' ? 'You win!' : 'Wiped out.');
-    post({ type: 'rumpus:result', phase, message: state.message, time: elapsed });
+    post({ type: 'romp:result', phase, message: state.message, time: elapsed });
   }
 
   function restart() {
@@ -96,7 +96,7 @@ export function boot(makeGame, opts = {}) {
     state = { phase: 'play', hud: {}, message: '' };
     api.rand = rng(hashString(JSON.stringify(config.level ?? {}) + (config.seed ?? '')) || 1);
     game = makeGame(config, api);
-    post({ type: 'rumpus:started' });
+    post({ type: 'romp:started' });
   }
 
   function load(next) {
@@ -109,7 +109,7 @@ export function boot(makeGame, opts = {}) {
       // Say so on the canvas rather than showing a frozen black rectangle.
       state.phase = 'error';
       state.message = String(err?.message || err);
-      post({ type: 'rumpus:error', message: state.message });
+      post({ type: 'romp:error', message: state.message });
     }
   }
 
@@ -129,7 +129,7 @@ export function boot(makeGame, opts = {}) {
         } catch (err) {
           state.phase = 'error';
           state.message = String(err?.message || err);
-          post({ type: 'rumpus:error', message: state.message });
+          post({ type: 'romp:error', message: state.message });
           break;
         }
         elapsed += STEP;
@@ -220,15 +220,15 @@ export function boot(makeGame, opts = {}) {
   addEventListener('message', (e) => {
     const data = e.data;
     if (!data || typeof data !== 'object') return;
-    if (data.type === 'rumpus:config') load(data.config);
-    if (data.type === 'rumpus:restart') restart();
+    if (data.type === 'romp:config') load(data.config);
+    if (data.type === 'romp:restart') restart();
   });
 
   requestAnimationFrame(frame);
-  post({ type: 'rumpus:ready' });
+  post({ type: 'romp:ready' });
 
   // Standalone (published) games inline their config on the page.
-  if (window.RUMPUS_CONFIG) load(window.RUMPUS_CONFIG);
+  if (window.ROMP_CONFIG) load(window.ROMP_CONFIG);
 
   return { load, restart };
 }

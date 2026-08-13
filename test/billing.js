@@ -24,8 +24,8 @@ process.env.ANTHROPIC_BASE_URL = `http://127.0.0.1:${PORT}/anthropic`;
 process.env.STRIPE_SECRET_KEY = 'sk_test_not_real';
 process.env.STRIPE_BASE_URL = `http://127.0.0.1:${PORT}/stripe`;
 process.env.STRIPE_WEBHOOK_SECRET = WEBHOOK_SECRET;
-process.env.RUMPUS_FREE_CREDITS = '3';
-process.env.RUMPUS_PROMOS = 'TESTCODE:5:2:2099-01-01,TINY:1:1';
+process.env.ROMP_FREE_CREDITS = '3';
+process.env.ROMP_PROMOS = 'TESTCODE:5:2:2099-01-01,TINY:1:1';
 
 const { ROOT, exampleConfig } = await import('../server/registry.js');
 // Each run starts from an empty ledger; these are files on disk locally.
@@ -35,7 +35,7 @@ const { handleApi } = await import('../server/api.js');
 const credits = await import('../server/credits.js');
 const payments = await import('../server/payments.js');
 
-// ── mock upstreams ──────────────────────────────────────────────────────────
+// ── mock upstreams ─────────────────────────────────────────────────────
 
 let seen = [];
 const server = createServer(async (req, res) => {
@@ -65,14 +65,14 @@ await new Promise((r) => server.listen(PORT, '127.0.0.1', r));
 test.after(() => server.close());
 
 const call = (pathname, { method = 'GET', body = {}, token, ip = '1.2.3.4', rawBody, headers = {} } = {}) =>
-  handleApi({ method, pathname, searchParams: new URLSearchParams(), body, token, ip, rawBody, headers, origin: 'https://rumpus.test' });
+  handleApi({ method, pathname, searchParams: new URLSearchParams(), body, token, ip, rawBody, headers, origin: 'https://romp.test' });
 
 const newVisitor = async (ip = '1.2.3.4') => {
   const res = await call('/api/account', { ip });
   return res.body.token;
 };
 
-// ── free credits ────────────────────────────────────────────────────────────
+// ── free credits ───────────────────────────────────────────────────────
 
 test('a new visitor gets the arrival grant, as free credits only', async () => {
   const res = await call('/api/account', { ip: '10.0.0.1' });
@@ -109,7 +109,7 @@ test('running out of credits returns 402 rather than a free generation', async (
   assert.equal(broke.body.free, 0);
 });
 
-// ── the cheap-tier restriction ──────────────────────────────────────────────
+// ── the cheap-tier restriction ──────────────────────────────────────────
 
 test('free credits cannot buy the expensive tier', async () => {
   // This is the whole point of splitting the balances: a launch code hands out
@@ -151,7 +151,7 @@ test('an unknown tier falls back to fast rather than being trusted', async () =>
   assert.equal(res.body.account.free, 2, 'should have charged the fast price from free');
 });
 
-// ── promo codes ─────────────────────────────────────────────────────────────
+// ── promo codes ────────────────────────────────────────────────────────
 
 test('a promo code adds free credits, once per visitor', async () => {
   const token = await newVisitor('10.0.1.1');
@@ -202,7 +202,7 @@ test('the launch codes grant a modest amount on the cheap tier', async () => {
   }
 });
 
-// ── payments ────────────────────────────────────────────────────────────────
+// ── payments ──────────────────────────────────────────────────────────
 
 test('checkout creates a Stripe session carrying the visitor token', async () => {
   const token = await newVisitor('10.0.2.1');
@@ -213,7 +213,7 @@ test('checkout creates a Stripe session carrying the visitor token', async () =>
 
   const sent = seen.find((r) => r.url.startsWith('/stripe'));
   assert.ok(sent, 'no request reached Stripe');
-  assert.match(sent.body, /metadata%5Brumpus_token%5D=r_/, 'token must ride along or the webhook cannot credit anyone');
+  assert.match(sent.body, /metadata%5Bromp_token%5D=r_/, 'token must ride along or the webhook cannot credit anyone');
   assert.match(sent.body, /unit_amount%5D=500/, "the small pack must charge $5.00");
 });
 
@@ -231,7 +231,7 @@ const signedWebhook = (event, secret = WEBHOOK_SECRET, timestamp = Math.floor(Da
 
 const paidEvent = (token, credits = 100, sessionId = 'cs_test_abc') => ({
   type: 'checkout.session.completed',
-  data: { object: { id: sessionId, payment_status: 'paid', metadata: { rumpus_token: token, credits } } },
+  data: { object: { id: sessionId, payment_status: 'paid', metadata: { romp_token: token, credits } } },
 });
 
 test('a signed webhook grants paid credits', async () => {
@@ -285,7 +285,7 @@ test('an unpaid session grants nothing', async () => {
   const token = await newVisitor('10.0.2.7');
   const event = {
     type: 'checkout.session.completed',
-    data: { object: { id: 'cs_unpaid', payment_status: 'unpaid', metadata: { rumpus_token: token, credits: 999 } } },
+    data: { object: { id: 'cs_unpaid', payment_status: 'unpaid', metadata: { romp_token: token, credits: 999 } } },
   };
   const { raw, header } = signedWebhook(event);
   const res = await call('/api/stripe-webhook', { method: 'POST', rawBody: raw, headers: { 'stripe-signature': header } });
@@ -301,7 +301,7 @@ test('packs are priced in whole cents and describe themselves', () => {
   }
 });
 
-// ── the free-forever path ───────────────────────────────────────────────────
+// ── the free-forever path ───────────────────────────────────────────────
 
 test('with no provider configured nothing is metered and nothing is charged', async () => {
   const groq = process.env.GROQ_API_KEY;
@@ -319,5 +319,85 @@ test('with no provider configured nothing is metered and nothing is charged', as
   } finally {
     process.env.GROQ_API_KEY = groq;
     process.env.ANTHROPIC_API_KEY = anthropic;
+  }
+});
+
+// ── regressions: ways a visitor could be charged unfairly ───────────────────
+
+test('"best" is not charged at a premium when it resolves to the same model', async () => {
+  // With only one provider configured, "best" and "fast" are the same model.
+  // Charging double for identical output is taking money for nothing.
+  const anthropic = process.env.ANTHROPIC_API_KEY;
+  delete process.env.ANTHROPIC_API_KEY;
+  try {
+    const { effectiveTier } = await import('../server/llm.js');
+    assert.equal(effectiveTier('best'), 'fast', 'best should downgrade when it is not actually better');
+
+    const token = await newVisitor('10.0.3.1');
+    const account = await credits.getAccount(token);
+    await credits.grantPaid(account, 10, 'test');
+
+    const res = await call('/api/generate', { method: 'POST', token, body: { prompt: 'game', tier: 'best' } });
+    assert.equal(res.status, 200);
+    assert.equal(res.body.account.free, 2, 'should have charged one FREE credit, at the fast price');
+    assert.equal(res.body.account.paid, 10, 'paid credits should be untouched');
+  } finally {
+    process.env.ANTHROPIC_API_KEY = anthropic;
+  }
+});
+
+test('"best" is still charged at a premium when it really is a different model', async () => {
+  const { effectiveTier } = await import('../server/llm.js');
+  assert.equal(effectiveTier('best'), 'best', 'both providers are configured here');
+});
+
+test('a crash after charging refunds the credit', async () => {
+  // The model call is already paid for by the time it runs, so anything that
+  // throws past that point has taken money and delivered nothing.
+  const token = await newVisitor('10.0.3.2');
+  const before = (await credits.getAccount(token)).free;
+
+  const generate = await import('../server/generate.js');
+  const original = generate.generate;
+  const api = await import('../server/api.js');
+
+  // Force a non-ModelError failure by handing publish-shaped garbage to edit,
+  // which throws on an unknown template before any fallback can catch it.
+  await assert.rejects(
+    () => api.handleApi({
+      method: 'POST',
+      pathname: '/api/edit',
+      searchParams: new URLSearchParams(),
+      token,
+      ip: '10.0.3.2',
+      body: { templateId: 'no-such-template', config: {}, instruction: 'go' },
+    }),
+    /unknown template/
+  );
+
+  assert.equal((await credits.getAccount(token)).free, before, 'the credit was not refunded after a crash');
+  assert.equal(original, generate.generate, 'sanity: module not mutated');
+});
+
+test('nothing a visitor publishes contains their credit token', async () => {
+  // /api/generate returns the caller's balance and token, and the editor sends
+  // that whole object straight back to /api/publish. store.put currently copies
+  // an explicit field list so none of it is retained — this pins that, because
+  // the day someone "simplifies" it to a spread is the day tokens start
+  // appearing in published bundles.
+  const token = await newVisitor('10.0.3.3');
+  const gen = await call('/api/generate', { method: 'POST', token, body: { prompt: 'a cat game' } });
+  assert.ok(gen.body.account?.token, 'precondition: generate returns the token');
+
+  const pub = await call('/api/publish', { method: 'POST', token, body: { game: gen.body } });
+  assert.equal(pub.status, 200);
+  assert.ok(!JSON.stringify(pub.body.game).includes(token), 'the visitor token was stored with the game');
+
+  // And the artifact people actually share.
+  const { readBundleFile } = await import('../server/storage.js');
+  for (const file of ['index.html', 'game.html', 'romp.json']) {
+    const contents = await readBundleFile(pub.body.slug, file);
+    assert.ok(contents, `bundle is missing ${file}`);
+    assert.ok(!contents.includes(token), `${file} in the published bundle contains the visitor token`);
   }
 });

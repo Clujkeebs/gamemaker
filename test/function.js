@@ -17,7 +17,7 @@ import handler from '../netlify/functions/api.mjs';
 import { ROOT, templates } from '../server/registry.js';
 
 const call = (path, { method = 'GET', body } = {}) =>
-  handler(new Request(`https://rumpus-gg.netlify.app${path}`, {
+  handler(new Request(`https://romp-gg.netlify.app${path}`, {
     method,
     headers: body ? { 'content-type': 'application/json' } : undefined,
     body: body ? JSON.stringify(body) : undefined,
@@ -58,7 +58,7 @@ test('the function publishes and then serves the bundle back', async () => {
   assert.match(await page.text(), /<title>/);
 
   const game = await call(`/p/${pub.slug}/game.html`);
-  assert.match(await game.text(), /RUMPUS_CONFIG/);
+  assert.match(await game.text(), /ROMP_CONFIG/);
 
   const engine = await call(`/p/${pub.slug}/templates/${gen.template_id}/engine.js`);
   assert.equal(engine.status, 200);

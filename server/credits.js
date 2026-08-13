@@ -20,9 +20,9 @@ import { randomUUID } from 'node:crypto';
 import { readDoc, writeDoc } from './storage.js';
 import { findPromo, isExpired, normalise } from './promos.js';
 
-export const FREE_ON_ARRIVAL = Number(process.env.RUMPUS_FREE_CREDITS ?? 5);
-export const MAX_FREE_BALANCE = Number(process.env.RUMPUS_MAX_FREE ?? 60);
-const NEW_ACCOUNTS_PER_IP_PER_DAY = Number(process.env.RUMPUS_IP_CAP ?? 8);
+export const FREE_ON_ARRIVAL = Number(process.env.ROMP_FREE_CREDITS ?? 5);
+export const MAX_FREE_BALANCE = Number(process.env.ROMP_MAX_FREE ?? 60);
+const NEW_ACCOUNTS_PER_IP_PER_DAY = Number(process.env.ROMP_IP_CAP ?? 8);
 
 export const COST = { fast: 1, best: 2 };
 

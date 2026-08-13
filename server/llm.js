@@ -27,7 +27,7 @@ export const PROVIDERS = {
     id: 'anthropic',
     label: 'Claude',
     envVar: 'ANTHROPIC_API_KEY',
-    defaultModel: process.env.RUMPUS_MODEL || 'claude-sonnet-5',
+    defaultModel: process.env.ROMP_MODEL || 'claude-sonnet-5',
     signupUrl: 'https://console.anthropic.com/settings/keys',
   },
 };
@@ -44,6 +44,20 @@ export const anyConfigured = () => Object.keys(PROVIDERS).some(configured);
 export function resolveProvider(tier = 'fast') {
   const order = (TIERS[tier] ?? TIERS.fast).order;
   return order.find(configured) ?? null;
+}
+
+/**
+ * The tier a request will actually get, which is not always the one it asked
+ * for.
+ *
+ * With only one provider configured, "best" resolves to the same model as
+ * "fast" — so charging the premium price for it would be taking money for
+ * nothing. Downgrade instead, and charge accordingly.
+ */
+export function effectiveTier(tier = 'fast') {
+  const wanted = TIERS[tier] ? tier : 'fast';
+  if (wanted !== 'best') return wanted;
+  return resolveProvider('best') === resolveProvider('fast') ? 'fast' : 'best';
 }
 
 export function providerStatus() {

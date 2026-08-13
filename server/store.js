@@ -13,14 +13,14 @@ import { readIndex, writeIndex } from './storage.js';
 const RESERVED = new Set([
   'www', 'api', 'app', 'admin', 'mail', 'ftp', 'cdn', 'static', 'assets',
   'docs', 'blog', 'help', 'support', 'status', 'dashboard', 'account',
-  'login', 'signup', 'auth', 'billing', 'rumpus', 'play', 'games', 'new',
+  'login', 'signup', 'auth', 'billing', 'romp', 'play', 'games', 'new',
   'preview', 'styles', 'index',
 ]);
 
 export function slugify(title) {
   const base = String(title || '')
     .toLowerCase()
-    .replace(/['']/g, '')
+    .replace(/['’]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 40)
@@ -64,6 +64,6 @@ export const newId = () =>
 
 /** The URL a published game lives at, per the tier-1 wildcard-subdomain plan. */
 export function publicUrl(slug) {
-  const root = process.env.RUMPUS_ROOT_DOMAIN;
+  const root = process.env.ROMP_ROOT_DOMAIN;
   return root ? `https://${slug}.${root}` : null;
 }

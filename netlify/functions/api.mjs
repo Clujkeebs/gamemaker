@@ -1,4 +1,4 @@
-// Netlify Function: the whole Rumpus API on one route.
+// Netlify Function: the whole Romp API on one route.
 //
 // Deliberately thin. Everything it does lives in server/api.js, which the local
 // Node server also calls — so the deployed app and `npm start` cannot drift
@@ -41,14 +41,14 @@ export default async (request) => {
       body,
       rawBody: raw,
       headers: Object.fromEntries(request.headers),
-      token: request.headers.get('x-rumpus-token'),
+      token: request.headers.get('x-romp-token'),
       // Netlify's own header; request.headers has no peer address.
       ip: request.headers.get('x-nf-client-connection-ip') ?? request.headers.get('x-forwarded-for'),
       origin: url.origin,
     });
     return json(out.status, out.body);
   } catch (err) {
-    console.error('[rumpus]', path, err);
+    console.error('[romp]', path, err);
     return json(500, { error: String(err?.message ?? err) });
   }
 };

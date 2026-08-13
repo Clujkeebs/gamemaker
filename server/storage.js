@@ -9,8 +9,8 @@
 // The Blobs import is lazy on purpose. The local server stays zero-dependency;
 // @netlify/blobs is only ever loaded inside the function that needs it.
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync, rmSync, readdirSync, statSync } from 'node:fs';
-import { join, dirname, relative, sep } from 'node:path';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, rmSync, statSync } from 'node:fs';
+import { join, dirname } from 'node:path';
 import { ROOT } from './registry.js';
 
 export const onNetlify = () =>
@@ -24,7 +24,7 @@ async function blobs() {
     const { getStore } = await import('@netlify/blobs');
     // Strong consistency: publish then immediately fetch the page is the normal
     // flow here, and eventual consistency would serve a 404 on the happy path.
-    cached = getStore({ name: 'rumpus', consistency: 'strong' });
+    cached = getStore({ name: 'romp', consistency: 'strong' });
   }
   return cached;
 }
@@ -102,7 +102,7 @@ export async function writeBundle(slug, files) {
     for (const [rel, contents] of Object.entries(files)) {
       await store.set(bundleKey(slug, rel), contents);
     }
-    return { location: `blobs:rumpus/sites/${slug}` };
+    return { location: `blobs:romp/sites/${slug}` };
   }
   const outDir = join(DIST_DIR, slug);
   if (existsSync(outDir)) rmSync(outDir, { recursive: true, force: true });
@@ -124,20 +124,4 @@ export async function readBundleFile(slug, rel) {
   const abs = join(base, rel);
   if (!abs.startsWith(base) || !existsSync(abs) || !statSync(abs).isFile()) return null;
   return readFileSync(abs, 'utf8');
-}
-
-/** Local only, for the dev server's directory listing and tests. */
-export function localBundlePaths(slug) {
-  const base = join(DIST_DIR, slug);
-  if (!existsSync(base)) return [];
-  const out = [];
-  const walk = (dir) => {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const abs = join(dir, entry.name);
-      if (entry.isDirectory()) walk(abs);
-      else out.push(relative(base, abs).split(sep).join('/'));
-    }
-  };
-  walk(base);
-  return out;
 }

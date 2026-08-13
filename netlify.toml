@@ -1,4 +1,4 @@
-# Rumpus on Netlify.
+# Romp on Netlify.
 #
 # The editor and the game engines are static; everything under /api and /p is
 # one Function that calls the same server/api.js the local Node server does.

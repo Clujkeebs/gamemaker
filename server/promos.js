@@ -5,8 +5,8 @@
 // more generous needs a card, which is the point of the paid tier.
 //
 // Codes live here rather than in a database because they change with a deploy,
-// not with traffic. RUMPUS_PROMOS can add more without a code change:
-//   RUMPUS_PROMOS='LAUNCHDAY:20:500:2026-12-31,FRIENDS:50:25'
+// not with traffic. ROMP_PROMOS can add more without a code change:
+//   ROMP_PROMOS='LAUNCHDAY:20:500:2026-12-31,FRIENDS:50:25'
 //   (code : credits : maxRedemptions [: expires])
 
 const BUILT_IN = [
@@ -25,7 +25,7 @@ const BUILT_IN = [
     note: 'Shipathon',
   },
   {
-    code: 'RUMPUS',
+    code: 'ROMP',
     credits: 10,
     maxRedemptions: 2000,
     expires: '2026-12-31',
@@ -34,7 +34,7 @@ const BUILT_IN = [
 ];
 
 function fromEnv() {
-  const raw = process.env.RUMPUS_PROMOS;
+  const raw = process.env.ROMP_PROMOS;
   if (!raw) return [];
   return raw.split(',').map((entry) => {
     const [code, credits, maxRedemptions, expires] = entry.split(':').map((s) => s?.trim());
@@ -44,7 +44,7 @@ function fromEnv() {
       credits: Math.max(0, Math.min(200, Number(credits) || 0)),
       maxRedemptions: Number(maxRedemptions) || 100,
       expires: expires || null,
-      note: 'configured via RUMPUS_PROMOS',
+      note: 'configured via ROMP_PROMOS',
     };
   }).filter(Boolean);
 }

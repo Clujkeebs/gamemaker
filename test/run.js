@@ -22,7 +22,7 @@ import { rng } from '../shared/draw.js';
 const all = [...templates.values()];
 const arcadeSchema = JSON.parse(readFileSync(join(ROOT, 'arcade', 'schema.json'), 'utf8'));
 
-// ── the library is internally consistent ────────────────────────────────────
+// ── the library is internally consistent ──────────────────────────────────
 
 test('every template ships engine, schema, and at least two examples', () => {
   assert.ok(all.length >= 4, 'expected at least four templates');
@@ -54,7 +54,7 @@ test('declared mechanicHooks match what each engine actually implements', () => 
   }
 });
 
-// ── example configs are a regression suite ──────────────────────────────────
+// ── example configs are a regression suite ────────────────────────────────
 
 test('every example config validates with zero errors', () => {
   for (const t of all) {
@@ -121,7 +121,7 @@ test('engines survive a config pinned to every schema minimum and maximum', asyn
   }
 });
 
-// ── validation policy ───────────────────────────────────────────────────────
+// ── validation policy ─────────────────────────────────────────────────
 
 test('out-of-range numbers are clamped, not rejected', () => {
   const t = templates.get('platformer-classic');
@@ -195,7 +195,7 @@ test('a string number is coerced rather than failing the whole config', () => {
   assert.equal(res.config.bricks.rows, 4);
 });
 
-// ── reachability ────────────────────────────────────────────────────────────
+// ── reachability ─────────────────────────────────────────────────────
 
 test('a sealed goal is detected', () => {
   const grid = [
@@ -249,7 +249,7 @@ test('jump reach is derived from physics, not hard-coded', () => {
     'low gravity must yield a taller search than high gravity');
 });
 
-// ── model-output parsing ────────────────────────────────────────────────────
+// ── model-output parsing ──────────────────────────────────────────────
 
 test('JSON survives fences, prose, and trailing chatter', () => {
   assert.deepEqual(extractJson('{"a":1}'), { a: 1 });
@@ -260,7 +260,7 @@ test('JSON survives fences, prose, and trailing chatter', () => {
   assert.equal(extractJson('{"broken": '), null);
 });
 
-// ── offline generator ───────────────────────────────────────────────────────
+// ── offline generator ─────────────────────────────────────────────────
 
 test('offline classification picks the obvious template', () => {
   assert.equal(classifyOffline('shoot waves of aliens').template_id, 'top-down-shooter');
@@ -326,7 +326,7 @@ test('offline generation is deterministic for the same prompt', () => {
   assert.deepEqual(a.config, b.config);
 });
 
-// ── publishing ──────────────────────────────────────────────────────────────
+// ── publishing ────────────────────────────────────────────────────────
 
 test('slugs are url-safe and stable', () => {
   assert.equal(slugify("Cat Ninja's Revenge!"), 'cat-ninjas-revenge');
@@ -347,13 +347,13 @@ test('a published bundle is self-contained and keeps the game separate from the 
   const indexHtml = files['index.html'];
   const gameHtml = files['game.html'];
 
-  assert.ok(gameHtml.includes('RUMPUS_CONFIG'), 'game.html does not carry its config');
+  assert.ok(gameHtml.includes('ROMP_CONFIG'), 'game.html does not carry its config');
   assert.ok(gameHtml.includes(`templates/${game.template_id}/engine.js`), 'game.html does not load its engine');
   assert.ok(gameHtml.includes(game.template_version), 'game.html does not record the pinned engine version');
 
   // The separation the architecture promises: restyling the page cannot reach
   // the game, because the page contains none of it.
-  assert.ok(!indexHtml.includes('RUMPUS_CONFIG'), 'the arcade page leaked the game config');
+  assert.ok(!indexHtml.includes('ROMP_CONFIG'), 'the arcade page leaked the game config');
   assert.ok(indexHtml.includes('game.html'), 'the arcade page does not embed the game');
 });
 
@@ -393,7 +393,7 @@ test('the standalone game page pins its engine version', () => {
   assert.ok(html.includes('type="module"'));
 });
 
-// ── art direction ───────────────────────────────────────────────────────────
+// ── art direction ────────────────────────────────────────────────────
 
 test('every body plan, feature, and pickup composes to a well-formed mask', () => {
   for (const build of BUILD_NAMES) {
@@ -551,7 +551,7 @@ test('published bundles ship the sprite and style modules the engine needs', () 
   }
 });
 
-// ── sokoban solvability ─────────────────────────────────────────────────────
+// ── sokoban solvability ───────────────────────────────────────────────
 
 test('the solver proves a trivial push puzzle solvable', () => {
   const res = checkSokoban(['#######', '#..T..#', '#..B..#', '#..P..#', '#######']);

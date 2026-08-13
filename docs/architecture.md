@@ -1,4 +1,4 @@
-# Rumpus — architecture
+# Romp — architecture
 
 Generation, deploy, DNS, and site customization.
 
@@ -21,7 +21,7 @@ that doesn't run.
 
 ## 2. The three artifacts
 
-A game in Rumpus is three separable things. Keeping them separate is what makes
+A game in Romp is three separable things. Keeping them separate is what makes
 the whole thing safe to edit.
 
 | Artifact | Contents | Mutated by | Blast radius |
@@ -69,7 +69,7 @@ game.html                       the game: pinned engine + inlined config
 templates/<id>/engine.js        copy of the engine, taken at publish time
 shared/*.js                     only the modules that engine actually imports
 _headers                        immutable for engine code, no-cache for HTML
-rumpus.json                     what was published, and from which template version
+romp.json                       what was published, and from which template version
 ```
 
 The layout mirrors the repo so the engine's own relative imports keep working
@@ -98,11 +98,11 @@ Three tiers, in the order they're worth building.
 
 ### Tier 1 — free subdomain (default, build this)
 
-Every published game gets `<slug>.rumpus.gg` under a root domain we own.
+Every published game gets `<slug>.romps.ai` under a root domain we own.
 
 Requirements, all modest:
-- One owned root domain (`rumpus.gg`).
-- Wildcard DNS (`*.rumpus.gg`) pointed at the host, plus a wildcard certificate
+- One owned root domain (`romps.ai`).
+- Wildcard DNS (`*.romps.ai`) pointed at the host, plus a wildcard certificate
   so new subdomains are live and HTTPS-valid the instant they exist — no
   per-subdomain DNS API call in the request path.
 - Slug allocation: derive from the title, lowercase, dash-separated, collision
@@ -241,7 +241,8 @@ and a run of ground becomes a row of separate balls.
 
 Neither an API key nor a hosting token is required to run the whole loop.
 
-- **No `ANTHROPIC_API_KEY`** — an offline generator takes over: keyword
+- **No model key at all** (neither `GROQ_API_KEY` nor `ANTHROPIC_API_KEY`) — an
+  offline generator takes over: keyword
   classification against the same template catalog, a palette chosen from the
   words in the prompt, and procedurally generated levels (randomized-DFS mazes,
   which are connected by construction). It is meaningfully dumber than the

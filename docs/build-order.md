@@ -1,4 +1,4 @@
-# Rumpus — build order
+# Romp — build order
 
 Ordered so that every stopping point after step 3 is a complete demo, not a
 half-finished one.
@@ -46,7 +46,7 @@ entire pitch.
 > demoable with no hosting account. The Netlify client is untested against the
 > live API.
 
-Netlify bundle + wildcard DNS on `rumpus.gg`. No custom domains yet.
+Netlify bundle + wildcard DNS on `romps.ai`. No custom domains yet.
 
 Needs: bundler, deploy connector call, slug allocation with collision handling,
 stable-URL republish.

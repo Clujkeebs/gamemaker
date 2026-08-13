@@ -1,8 +1,8 @@
-# Rumpus
+# Romp
 
 **Describe a game. Play it. Ship it.**
 
-Rumpus turns a plain-English game idea into a playable 2D game in seconds, lets
+Romp turns a plain-English game idea into a playable 2D game in seconds, lets
 you change it by talking to it, and publishes it to a link you can share.
 
 ```
@@ -10,19 +10,19 @@ you change it by talking to it, and publishes it to a link you can share.
         ↓
    playable in the browser, immediately
         ↓
-   catninja.rumpus.gg
+   catninja.romps.ai
 ```
 
 ## Run it
 
 ```bash
 npm start          # http://localhost:4173
-npm test           # 94 tests, no network needed
+npm test           # 98 tests, no network needed
 ```
 
 No install step. No build step. No dependencies — Node 20+ and nothing else.
 
-It works with **no API key at all**: without one, Rumpus falls back to a local
+It works with **no API key at all**: without one, Romp falls back to a local
 generator (keyword classification, palette matching, procedural levels). That
 path is obviously dumber than the model, and the UI says so rather than
 pretending otherwise. Add a key to get the real thing:
@@ -32,7 +32,7 @@ GROQ_API_KEY=gsk_...         # free tier, no card — the cheap path
 ANTHROPIC_API_KEY=sk-ant-... # better results — the paid path
 NETLIFY_AUTH_TOKEN=...       # publish to a real URL instead of serving locally
 STRIPE_SECRET_KEY=sk_...     # sell credit packs
-RUMPUS_ROOT_DOMAIN=rumpus.gg # wildcard subdomain per game
+ROMP_ROOT_DOMAIN=romps.ai    # wildcard subdomain per game
 ```
 
 See `.env.example` for the full list.
@@ -58,10 +58,10 @@ charging for it would be a lie.
 ### Promo codes
 
 `PRODUCTHUNT` and `SHIPATHON` grant 20 credits each, capped at 750 redemptions,
-one per visitor. `RUMPUS` grants 10. Add more without a code change:
+one per visitor. `ROMP` grants 10. Add more without a code change:
 
 ```bash
-RUMPUS_PROMOS='LAUNCHDAY:20:500:2026-12-31,FRIENDS:50:25'
+ROMP_PROMOS='LAUNCHDAY:20:500:2026-12-31,FRIENDS:50:25'
 #              code : credits : maxRedemptions : expires
 ```
 
@@ -90,7 +90,7 @@ Two honest caveats:
 
 ## How it works
 
-Rumpus does **not** write game engines. It ships hand-built, tested 2D
+Romp does **not** write game engines. It ships hand-built, tested 2D
 templates, each with a config schema and documented safe ranges. The model's
 only job is to pick a template and write a config for it. Engine code never
 changes, so generated games don't break.
@@ -179,12 +179,12 @@ templates/    one directory per archetype: engine.js + schema.json + examples/
 arcade/       the landing-page template and its own config schema
 server/       zero-dep HTTP server, generation pipeline, bundler, deploy, DNS
 web/          the editor, plus /styles.html — the sprite and style gallery
-test/         94 tests, incl. mocked model, Stripe and function harnesses
+test/         98 tests, incl. mocked model, Stripe and function harnesses
 ```
 
 ## Deploying
 
-Rumpus runs as a Node server locally and as static files + one Netlify Function
+Romp runs as a Node server locally and as static files + one Netlify Function
 in production. Both call the same `server/api.js`, so they can't drift.
 
 The simplest route is to connect this repo in Netlify's UI — Netlify clones and
@@ -207,7 +207,7 @@ Set these in **Site configuration → Environment variables**:
 | `ANTHROPIC_API_KEY` | No "Best" tier; everything runs on Groq. With neither, the site falls back to the offline generator. |
 | `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` | No credit packs; free and promo credits only. |
 | `NETLIFY_AUTH_TOKEN` | Published games are served from the app at `/p/<slug>/` instead of getting their own Netlify site. |
-| `RUMPUS_ROOT_DOMAIN` | No per-game subdomains. |
+| `ROMP_ROOT_DOMAIN` | No per-game subdomains. |
 
 Two things about the hosted version worth knowing:
 
@@ -220,7 +220,7 @@ Two things about the hosted version worth knowing:
 
 ## Docs
 
-- [`docs/naming.md`](docs/naming.md) — why it's called Rumpus
+- [`docs/naming.md`](docs/naming.md) — why it's called Romp
 - [`docs/system-prompt.md`](docs/system-prompt.md) — the prompt driving generation
 - [`docs/architecture.md`](docs/architecture.md) — pipeline, deploy, DNS, arcade page
 - [`docs/build-order.md`](docs/build-order.md) — what's built and what's next
@@ -231,8 +231,10 @@ Steps 1–5 of the build order are implemented and tested end to end: prompt →
 config → live preview → conversational edit → publish → arcade page → custom
 domain. Step 6 is template-library expansion, which is ongoing by design.
 
-Two things are **unverified against live services** because this environment has
-no credentials: real Claude API calls and real Netlify deploys. Both paths are
-covered up to the network boundary — the generation pipeline is tested against a
-mock Claude endpoint, and the Netlify client is written against the documented
-file-digest API but has never been run against netlify.com.
+Four things are **unverified against live services**, because the environment
+this was built in has no outbound access to them: Groq, Claude, Stripe and
+Netlify. Every one of them is tested up to its own network boundary instead —
+both model providers and Stripe against mock HTTP servers that speak their real
+wire formats, and the Netlify client written against the documented file-digest
+API. What that means in practice: the first run against real credentials is the
+first time those four sockets have ever opened.

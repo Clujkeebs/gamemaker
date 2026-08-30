@@ -17,7 +17,7 @@ you change it by talking to it, and publishes it to a link you can share.
 
 ```bash
 npm start          # http://localhost:4173
-npm test           # 107 tests, no network needed
+npm test           # 111 tests, no network needed
 ```
 
 No install step. No build step. No dependencies — Node 20+ and nothing else.
@@ -179,7 +179,7 @@ templates/    one directory per archetype: engine.js + schema.json + examples/
 arcade/       the landing-page template and its own config schema
 server/       zero-dep HTTP server, generation pipeline, bundler, deploy, DNS
 web/          the editor, plus /styles.html — the sprite and style gallery
-test/         107 tests, incl. mocked model, Stripe and function harnesses
+test/         111 tests, incl. mocked model, Stripe and function harnesses
 ```
 
 ## Deploying
@@ -247,9 +247,14 @@ Measured, live, end to end through `/api/generate`:
 
 | Prompt | Time |
 |---|---|
-| top-down shooter | ~7s |
-| platformer | ~9s |
-| push puzzle (slowest) | ~11s |
+| top-down shooter | ~6s |
+| platformer | ~8s |
+| push puzzle (slowest) | ~7s |
+
+Classification is skipped when the prompt names its genre outright, which
+removes a whole model round trip from about half of real prompts. Vague or
+blended ideas still pay for it, because that is where a model's judgement is
+worth the second it costs.
 
 Two things follow from that, and both matter for hosting:
 

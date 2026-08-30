@@ -1,15 +1,20 @@
 // The generation pipeline: prompt in, validated config out.
 //
-// Two model calls, not one. Classification is a small, cheap decision that only
-// needs the catalog; configuration needs one template's full schema. Doing them
-// together would mean sending every schema on every request, which costs
-// context and measurably hurts accuracy on the template that actually matters.
+// Up to two model calls, and the two are kept separate on purpose: choosing a
+// template only needs the catalog, while writing a config needs that one
+// template's full schema. Doing both at once would mean sending every schema on
+// every request, which costs context and measurably hurts accuracy on the
+// template that actually matters.
+//
+// The first call is skipped when the prompt names its genre outright — see
+// pickTemplate. That is most of the latency win available here, because the
+// user is waiting on the sum of both.
 
 import { complete, extractJson, anyConfigured, ModelError, resolveProvider, PROVIDERS } from './llm.js';
 import { catalog, schemaBrief, exampleConfig, get, ids } from './registry.js';
 import { validate, defaultsFor } from '../shared/schema.js';
 import { checkLevel, repairLevel } from '../shared/levelcheck.js';
-import { generateOffline } from './offline.js';
+import { generateOffline, classifyOffline } from './offline.js';
 
 // The template list is generated from the registry, never hand-written. A
 // prompt that lists a template which isn't installed makes the model classify
@@ -82,6 +87,23 @@ fundamentally different core verb), reply instead with ONLY:
 
 Otherwise also include: "changelog_note": "<one sentence on what changed>"`;
 
+/**
+ * Pick a template, using a model only when the choice is actually in doubt.
+ *
+ * Classification was a full round trip on every generation — a second or two of
+ * the user's wait spent on a decision the keyword pass already makes correctly
+ * whenever the prompt names its genre outright. Vague and blended ideas still
+ * go to the model, because that's where its judgement earns the latency (and
+ * where `secondary` comes from).
+ */
+async function pickTemplate(prompt, tier) {
+  const local = classifyOffline(prompt);
+  if (local.decisive) {
+    return { template_id: local.template_id, secondary: null, why: 'named its genre outright' };
+  }
+  return classify(prompt, tier);
+}
+
 async function classify(prompt, tier) {
   const { text } = await complete({
     system: classifierSystem(),
@@ -94,7 +116,6 @@ async function classify(prompt, tier) {
   if (!json?.template_id || !get(json.template_id)) {
     // A classifier that names a template we don't have is recoverable; keyword
     // matching is a fine floor, and it beats failing the whole request.
-    const { classifyOffline } = await import('./offline.js');
     return { ...classifyOffline(prompt), why: 'fallback: classifier returned an unknown template' };
   }
   return json;
@@ -189,7 +210,7 @@ export async function generate(prompt, forcedTemplate = null, { tier = 'fast' } 
   if (!anyConfigured()) return generateOffline(prompt, forcedTemplate);
 
   try {
-    const cls = forcedTemplate ? { template_id: forcedTemplate } : await classify(prompt, tier);
+    const cls = forcedTemplate ? { template_id: forcedTemplate } : await pickTemplate(prompt, tier);
     const templateId = cls.template_id;
     const example = exampleConfig(templateId);
 

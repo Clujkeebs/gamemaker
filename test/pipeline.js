@@ -52,8 +52,10 @@ const goodConfig = (id) => structuredClone(exampleConfig(id));
 // ── happy path ──────────────────────────────────────────────────────────────
 
 test('a clean model response becomes a validated game in two calls', async () => {
+  // Deliberately vague: a prompt that named its genre would skip the classifier
+  // call and this would silently stop testing the two-call path.
   reset(classifierSays('breakout-clone'), configSays(goodConfig('breakout-clone')));
-  const game = await generate('smash some bricks');
+  const game = await generate('make me something fun');
 
   assert.equal(game.source, 'model');
   assert.equal(game.template_id, 'breakout-clone');
@@ -126,7 +128,7 @@ test('malformed JSON is still parsed when the model wraps it in prose', async ()
 
 test('an unknown template from the classifier falls back to keyword matching', async () => {
   reset(reply('{"template_id":"3d-shooter-deluxe"}'), configSays(goodConfig('breakout-clone')));
-  const game = await generate('smash bricks with a paddle');
+  const game = await generate('make me something with a paddle in it');
   assert.equal(game.template_id, 'breakout-clone', 'should have keyword-matched instead of failing');
 });
 
@@ -151,7 +153,7 @@ test('an unwinnable generated level is detected and repaired before it renders',
     '#......#.#',
     '##########',
   ];
-  reset(classifierSays('top-down-collector'), configSays(cfg));
+  reset(configSays(cfg)); // 'escape the maze' names its genre, so no classify call
 
   const game = await generate('escape the maze');
   assert.equal(game.notes.repaired, true, 'a sealed goal should have been carved open');
@@ -213,12 +215,45 @@ test('a suggested template that does not exist is nulled rather than passed thro
 
 test('every game the pipeline returns is one the engine can actually run', async () => {
   for (const id of templates.keys()) {
-    reset(classifierSays(id), configSays(goodConfig(id)));
+    // Naming the template makes this decisive, so only the config call happens.
+    reset(configSays(goodConfig(id)));
     const game = await generate(`a game using ${id}`);
     const t = templates.get(id);
     assert.equal(validate(game.config, t.schema).errors.length, 0, `${id}: pipeline emitted an invalid config`);
     const { default: makeGame } = await import(t.enginePath);
     const { simulate } = await import('./harness.js');
     simulate(makeGame, game.config, { steps: 600 });
+  }
+});
+
+test('a prompt that names its genre skips the classifier round trip', async () => {
+  // Classification used to cost a model call on every single generation, even
+  // when the prompt said "bricks" and "paddle" outright. Only one canned reply
+  // is queued: if the pipeline still asks the classifier, it consumes this and
+  // the config pass gets nothing.
+  reset(configSays(goodConfig('breakout-clone')));
+  const game = await generate('smash some bricks with a paddle');
+
+  assert.equal(seen.length, 1, 'expected the classifier call to be skipped');
+  assert.equal(game.source, 'model');
+  assert.equal(game.template_id, 'breakout-clone');
+  assert.ok(seen[0].system.includes('breakout-clone'), 'the one call made was not the config pass');
+});
+
+test('a vague or blended prompt still pays for the classifier', async () => {
+  // The other half of the bargain: skipping is only safe where the keyword pass
+  // is unambiguous, and a blended idea is exactly where judgement is worth a
+  // round trip.
+  // Asserting the call *count* is not enough: if the classifier is wrongly
+  // skipped, the config pass eats the classifier's canned reply, fails to
+  // validate, and the repair retry restores the count to two. Check what the
+  // first call actually was.
+  for (const prompt of ['a game about my dog', 'a platformer where you also shoot things']) {
+    reset(classifierSays('platformer-classic'), configSays(goodConfig('platformer-classic')));
+    await generate(prompt);
+    assert.ok(
+      seen[0]?.system?.includes('classifier stage'),
+      `"${prompt}" skipped the classifier; first call was the config pass`
+    );
   }
 });

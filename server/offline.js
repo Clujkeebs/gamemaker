@@ -35,20 +35,40 @@ const SIGNALS = {
   'puzzle-sokoban': ['push', 'pushing', 'crate', 'box', 'boxes', 'sokoban', 'puzzle', 'warehouse', 'shove', 'arrange', 'sort', 'tidy', 'stack', 'deliver', 'block puzzle'],
 };
 
+// How far ahead of the runner-up a keyword match has to be before we trust it
+// without asking a model. Tuned against the labelled prompts in the test suite:
+// high enough that every blended prompt ("a platformer where you also shoot")
+// still goes to the model, low enough that plainly-worded ideas skip it.
+// At 4/4 this skips the model on roughly half the labelled prompts with no
+// wrong calls. Dropping the margin to 2 starts mis-taking blended ideas
+// ("a platformer where you also shoot") for single-genre ones, which is exactly
+// the judgement worth paying a round trip for.
+const DECISIVE_SCORE = 4;
+const DECISIVE_MARGIN = 4;
+
 export function classifyOffline(prompt) {
   const text = ` ${prompt.toLowerCase()} `;
-  let best = 'platformer-classic';
-  let bestScore = 0;
-  for (const [id, words] of Object.entries(SIGNALS)) {
-    let score = 0;
-    for (const w of words) if (hasWord(text, w)) score += w.includes(' ') ? 3 : 2;
-    if (score > bestScore) {
-      bestScore = score;
-      best = id;
-    }
-  }
+  const scores = Object.entries(SIGNALS).map(([id, words]) => [
+    id,
+    words.reduce((n, w) => n + (hasWord(text, w) ? (w.includes(' ') ? 3 : 2) : 0), 0),
+  ]);
   // The spec's tie-break: prefer the simplest, most robust archetype.
-  return { template_id: best, confident: bestScore >= 2 };
+  scores.sort((a, b) => b[1] - a[1] || (a[0] === 'platformer-classic' ? -1 : 1));
+
+  const [best, bestScore] = scores[0];
+  const runnerUp = scores[1]?.[1] ?? 0;
+  const template_id = bestScore > 0 ? best : 'platformer-classic';
+
+  return {
+    template_id,
+    confident: bestScore >= 2,
+    score: bestScore,
+    margin: bestScore - runnerUp,
+    // Unambiguous enough to skip the classifier model call entirely. A blended
+    // or vague idea is exactly where a model's judgement earns its latency, so
+    // those deliberately fail this test.
+    decisive: bestScore >= DECISIVE_SCORE && bestScore - runnerUp >= DECISIVE_MARGIN,
+  };
 }
 
 // --- palettes ---------------------------------------------------------------
